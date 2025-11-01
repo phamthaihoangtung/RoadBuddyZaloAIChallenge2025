@@ -1,0 +1,9 @@
+# Ignore everything in data/ except .gitkeep
+/data/**
+!/data/.gitkeep
+!/data/**/.gitkeep
+
+# Optional: ignore other system files
+.vscode/
+__pycache__/
+*.pyc
