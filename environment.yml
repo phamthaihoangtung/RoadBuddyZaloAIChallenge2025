@@ -1,11 +1,14 @@
 name: road-buddy
 dependencies:
   - python=3.10
-  - pytorch
   - numpy
   - pandas
   - scikit-learn
   - matplotlib
   - pip
   - pip:
-      - torch
+      - torch==2.4.1 --index-url=https://download.pytorch.org/whl/cu118
+      - transformers
+      - pyyaml
+      - accelerate
+
