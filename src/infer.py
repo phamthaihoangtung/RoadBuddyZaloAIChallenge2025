@@ -15,7 +15,9 @@ def load_config(path):
 
 def predict_conversation(model, processor, video_path, question):
     conversation = [
-        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "system", "content": "You are a helpful assistant. \
+            Answer the multiple choice question based on the video provided.\
+                Please select one of the provided choices and respond with only the choice letter in A, B, C, or D."},
         {
             "role": "user",
             "content": [
@@ -70,7 +72,8 @@ def main():
     results = []
     for item in test_data["data"]:
         video_path = os.path.join(os.path.dirname(os.path.dirname(infer_data_path)), item["video_path"])
-        question = item["question"]
+        # Concatenate question and choices
+        question = item["question"] + " " + " ".join(item.get("choices", []))
         if model_name == "placeholder":
             response = model.predict(video_path, question)
         else:
