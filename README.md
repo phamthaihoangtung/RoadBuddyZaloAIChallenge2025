@@ -4,6 +4,8 @@ This project contains code and resources for training deep learning models for t
 
 ## Environment Setup
 
+### Conda
+
 This project uses [conda](https://docs.conda.io/en/latest/miniconda.html) for environment management. To set up the environment:
 
 ```bash
@@ -13,7 +15,7 @@ conda env create -f environment.yml
 conda activate road-buddy
 ```
 
-## FlashAttention Installation
+### FlashAttention Installation
 
 FlashAttention cannot be installed directly via environment.yml. After activating your environment, install it manually:
 
