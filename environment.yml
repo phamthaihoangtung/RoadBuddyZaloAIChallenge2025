@@ -5,6 +5,10 @@ dependencies:
   - pandas
   - scikit-learn
   - matplotlib
+  - packaging
+  - ninja
+  - ffmpeg
+  - imageio
   - pip
   - pip:
       - torch==2.6.0 --index-url=https://download.pytorch.org/whl/cu124
@@ -12,5 +16,6 @@ dependencies:
       - transformers
       - pyyaml
       - accelerate
-      - flash-attn
+      - decord
+      # - flash-attn
 

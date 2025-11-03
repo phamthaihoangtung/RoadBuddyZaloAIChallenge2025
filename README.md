@@ -13,15 +13,15 @@ conda env create -f environment.yml
 conda activate road-buddy
 ```
 
-<!-- ## FlashAttention Installation
+## FlashAttention Installation
 
 FlashAttention cannot be installed directly via environment.yml. After activating your environment, install it manually:
 
 ```bash
-pip install flash-attn --no-build-isolation
+pip install flash-attn==2.7.3 --no-build-isolation
 ```
 
-Refer to the official instructions for troubleshooting and advanced installation: https://github.com/Dao-AILab/flash-attention#installation -->
+Refer to the official instructions for troubleshooting and advanced installation: https://github.com/Dao-AILab/flash-attention#installation
 
 ## Structure
 - `src/` - Main source code
