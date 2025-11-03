@@ -68,7 +68,7 @@ def main():
         test_data = json.load(f)
 
     results = []
-    for item in test_data["data"][:10]:
+    for item in test_data["data"]:
         video_path = os.path.join(os.path.dirname(os.path.dirname(infer_data_path)), item["video_path"])
         question = item["question"]
         if model_name == "placeholder":
