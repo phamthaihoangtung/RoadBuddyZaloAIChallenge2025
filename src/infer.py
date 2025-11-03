@@ -2,6 +2,9 @@ import yaml
 import os
 import torch
 import json
+import csv
+import pandas as pd
+from datetime import datetime
 from transformers import AutoProcessor, AutoModelForCausalLM
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "configs/config.yaml")
@@ -29,30 +32,52 @@ def predict_conversation(model, processor, video_path, question):
     response = processor.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
     return response
 
+def save_submission_csv(results, infer_data_path, output_path):
+    ts = datetime.now().strftime("%m%d_%H%M%S")
+    if output_path is None:
+        # Place submission in a 'submission' folder at same level as infer_data_path
+        submission_dir = os.path.join(os.path.dirname(infer_data_path), "submission")
+        os.makedirs(submission_dir, exist_ok=True)
+        output_path = submission_dir
+    output_csv = os.path.join(output_path, f"submission_{ts}.csv")
+    df = pd.DataFrame(results)
+    df.to_csv(output_csv, index=False)
+    print(f"Results saved to {output_csv}")
+
 def main():
     config = load_config(CONFIG_PATH)
     model_name = config.get("model_name", "DAMO-NLP-SG/VideoLLaMA3-7B")
     infer_data_path = config.get("infer_data_path", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/public_test/public_test.json"))
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        trust_remote_code=True,
-        device_map="auto",
-        torch_dtype=torch.bfloat16,
-        attn_implementation="flash_attention_2",
-    )
-    processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+    output_path = config.get("output_path", None)
 
-    # Load public test conversations
+    if model_name == "placeholder":
+        from utils.placeholder_model import PlaceholderModel
+        model = PlaceholderModel(config)
+        processor = None
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            trust_remote_code=True,
+            device_map="auto",
+            torch_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2",
+        )
+        processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+
     with open(infer_data_path, "r") as f:
         test_data = json.load(f)
-    for item in test_data["data"][:10]:  # Limit to first 10 for quick testing
+
+    results = []
+    for item in test_data["data"][:10]:
         video_path = os.path.join(os.path.dirname(os.path.dirname(infer_data_path)), item["video_path"])
-        print(f"Processing video: {video_path}")
         question = item["question"]
-        response = predict_conversation(model, processor, video_path, question)
-        print(f"ID: {item.get('id', '')}")
-        print(f"Question: {question}")
-        print(f"Response: {response}\n")
+        if model_name == "placeholder":
+            response = model.predict(video_path, question)
+        else:
+            response = predict_conversation(model, processor, video_path, question)
+        results.append({"id": item.get("id", ""), "answer": response})
+
+    save_submission_csv(results, infer_data_path, output_path)
 
 if __name__ == "__main__":
     main()
