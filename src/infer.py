@@ -46,7 +46,8 @@ def main():
     with open(infer_data_path, "r") as f:
         test_data = json.load(f)
     for item in test_data["data"][:10]:  # Limit to first 10 for quick testing
-        video_path = os.path.join(os.path.dirname(infer_data_path), item["video_path"])
+        video_path = os.path.join(os.path.dirname(os.path.dirname(infer_data_path)), item["video_path"])
+        print(f"Processing video: {video_path}")
         question = item["question"]
         response = predict_conversation(model, processor, video_path, question)
         print(f"ID: {item.get('id', '')}")
