@@ -1,10 +1,26 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+
 # Ignore everything in data/ except .gitkeep
-/data/**
-!/data/.gitkeep
-!/data/**/.gitkeep
+data/**
+!data/.gitkeep
+!data/**/.gitkeep
 
 # Optional: ignore other system files
 .vscode/
-__pycache__/
 *.pyc
 torch
+
+# Ignore logs
+logs/**
+*.log
+!logs/.gitkeep

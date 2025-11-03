@@ -4,23 +4,24 @@ This project contains code and resources for training deep learning models for t
 
 ## Environment Setup
 
-### Conda
 
-This project uses [conda](https://docs.conda.io/en/latest/miniconda.html) for environment management. To set up the environment:
+### Python & uv Environment
+
+This project now uses [uv](https://github.com/astral-sh/uv) and `pyproject.toml` for environment management. To set up the environment:
 
 ```bash
-conda env create -f environment.yml
-```
-```bash
-conda activate road-buddy
+pip install uv
+cd <project_path>
+uv venv
+uv pip install -e .
 ```
 
 ### FlashAttention Installation
 
-FlashAttention cannot be installed directly via environment.yml. After activating your environment, install it manually:
+FlashAttention cannot be installed directly via requirements.txt. After activating your environment, install it manually:
 
 ```bash
-pip install flash-attn==2.7.3 --no-build-isolation
+uv pip install flash-attn==2.7.3 --no-build-isolation
 ```
 
 Refer to the official instructions for troubleshooting and advanced installation: https://github.com/Dao-AILab/flash-attention#installation
