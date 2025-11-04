@@ -58,6 +58,7 @@ def main():
     model_name = config.get("model_name", "DAMO-NLP-SG/VideoLLaMA3-7B")
     infer_data_path = config.get("infer_data_path", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/public_test/public_test.json"))
     output_path = config.get("output_path", None)
+    attn_implementation = config.get("attn_implementation", "flash_attention_2")
 
     if model_name == "placeholder":
         from utils.placeholder_model import PlaceholderModel
@@ -69,7 +70,7 @@ def main():
             trust_remote_code=True,
             device_map="auto",
             torch_dtype=torch.bfloat16,
-            attn_implementation="flash_attention_2",
+            attn_implementation=attn_implementation,
         )
         processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
 
