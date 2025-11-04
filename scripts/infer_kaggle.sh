@@ -1,0 +1,1 @@
+python3 src/infer.py --config configs/configconfig_videollama_kaggle.yaml

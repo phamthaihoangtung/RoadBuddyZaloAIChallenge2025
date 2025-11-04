@@ -2,5 +2,5 @@
 batch_size: 32
 epochs: 10
 learning_rate: 0.001
-model_name: "placeholder"
+model_name: "DAMO-NLP-SG/VideoLLaMA3-2B"
 infer_data_path: "data/public_test/public_test.json"

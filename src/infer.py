@@ -6,12 +6,9 @@ import csv
 import pandas as pd
 from datetime import datetime
 from transformers import AutoProcessor, AutoModelForCausalLM
+import argparse
+from utils.utils import load_config
 
-CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "configs/config.yaml")
-
-def load_config(path):
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
 
 def predict_conversation(model, processor, video_path, question):
     conversation = [
@@ -47,7 +44,17 @@ def save_submission_csv(results, infer_data_path, output_path):
     print(f"Results saved to {output_csv}")
 
 def main():
-    config = load_config(CONFIG_PATH)
+    parser = argparse.ArgumentParser(description="Run inference for Road Buddy Challenge")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="configs/config.yaml",
+        help="Path to configuration file (default: configs/config.yaml)"
+    )
+    args = parser.parse_args()
+    
+    # Load config from the specified path
+    config = load_config(args.config)
     model_name = config.get("model_name", "DAMO-NLP-SG/VideoLLaMA3-7B")
     infer_data_path = config.get("infer_data_path", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/public_test/public_test.json"))
     output_path = config.get("output_path", None)
