@@ -27,7 +27,7 @@ def predict_conversation(model, processor, video_path, question):
     inputs = {k: v.cuda() if isinstance(v, torch.Tensor) else v for k, v in inputs.items()}
     if "pixel_values" in inputs:
         inputs["pixel_values"] = inputs["pixel_values"].to(torch.bfloat16)
-    output_ids = model.generate(**inputs, max_new_tokens=128)
+    output_ids = model.generate(**inputs, max_new_tokens=8)
     response = processor.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
     return response
 
@@ -59,7 +59,7 @@ def main():
     infer_data_path = config.get("infer_data_path", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/public_test/public_test.json"))
     output_path = config.get("output_path", None)
     attn_implementation = config.get("attn_implementation", "flash_attention_2")
-    use_quantization = config.get("use_8bit_quantization", True)
+    use_quantization = config.get("use_8bit_quantization", False)
 
     if model_name == "placeholder":
         from utils.placeholder_model import PlaceholderModel
