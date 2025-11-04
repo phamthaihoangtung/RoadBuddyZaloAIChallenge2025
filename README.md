@@ -26,6 +26,24 @@ uv pip install flash-attn==2.7.3 --no-build-isolation
 
 Refer to the official instructions for troubleshooting and advanced installation: https://github.com/Dao-AILab/flash-attention#installation
 
+### HuggingFace Access Token
+
+To access models from HuggingFace, you need to set up your access token:
+
+1. Create a `.env` file in the project root:
+```bash
+cp .env.example .env
+```
+
+2. Add your HuggingFace token to the `.env` file:
+```
+HF_TOKEN=your_huggingface_token_here
+```
+
+You can get your token from https://huggingface.co/settings/tokens
+
+**Note:** The `.env` file is already included in `.gitignore` to prevent committing sensitive tokens.
+
 ## Structure
 - `src/` - Main source code
 - `models/` - Saved models

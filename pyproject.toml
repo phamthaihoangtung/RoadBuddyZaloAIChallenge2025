@@ -26,6 +26,7 @@ dependencies = [
 	"opencv-python==4.6.0.66",
 	"pyarrow",
 	"pysubs2",
+	"python-dotenv>=1.2.1",
 ]
 
 [tool.uv.sources]

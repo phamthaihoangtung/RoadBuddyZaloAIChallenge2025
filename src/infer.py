@@ -8,7 +8,10 @@ from datetime import datetime
 from transformers import AutoProcessor, AutoModelForCausalLM, BitsAndBytesConfig
 import argparse
 from utils.utils import load_config
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 
 def predict_conversation(model, processor, video_path, question):
     conversation = [
@@ -60,6 +63,9 @@ def main():
     output_path = config.get("output_path", None)
     attn_implementation = config.get("attn_implementation", "flash_attention_2")
     use_quantization = config.get("use_8bit_quantization", False)
+    
+    # Get HuggingFace token from environment
+    hf_token = os.getenv("HF_TOKEN")
 
     if model_name == "placeholder":
         from utils.placeholder_model import PlaceholderModel
@@ -71,6 +77,7 @@ def main():
             "trust_remote_code": True,
             "device_map": "auto",
             "attn_implementation": attn_implementation,
+            "token": hf_token,
         }
         
         if use_quantization:
@@ -88,7 +95,7 @@ def main():
             model_name,
             **model_kwargs
         )
-        processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+        processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True, token=hf_token)
 
     with open(infer_data_path, "r") as f:
         test_data = json.load(f)
