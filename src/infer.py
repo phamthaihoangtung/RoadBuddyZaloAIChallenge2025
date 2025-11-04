@@ -59,7 +59,7 @@ def main():
     infer_data_path = config.get("infer_data_path", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/public_test/public_test.json"))
     output_path = config.get("output_path", None)
     attn_implementation = config.get("attn_implementation", "flash_attention_2")
-    use_quantization = config.get("use_8bit_quantization", False)
+    use_quantization = config.get("use_8bit_quantization", True)
 
     if model_name == "placeholder":
         from utils.placeholder_model import PlaceholderModel
