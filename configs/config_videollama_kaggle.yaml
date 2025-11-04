@@ -4,3 +4,4 @@ epochs: 10
 learning_rate: 0.001
 model_name: "DAMO-NLP-SG/VideoLLaMA3-7B"
 infer_data_path: "/kaggle/input/roadbuddy/public_test/public_test.json"
+output_path: "/kaggle/working"
