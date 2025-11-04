@@ -23,7 +23,6 @@ dependencies = [
 	"moviepy==1.0.3",
 	"ffmpeg-python",
 	"setuptools>=80.9.0",
-	"flash-attn==2.7.3",
 	"opencv-python==4.6.0.66",
 	"pyarrow",
 	"pysubs2",
