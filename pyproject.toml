@@ -27,6 +27,7 @@ dependencies = [
 	"pyarrow",
 	"pysubs2",
 	"python-dotenv>=1.2.1",
+	"unsloth>=2025.4.7",
 ]
 
 [tool.uv.sources]
