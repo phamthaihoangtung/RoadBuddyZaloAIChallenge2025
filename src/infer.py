@@ -5,7 +5,7 @@ import json
 import csv
 import pandas as pd
 from datetime import datetime
-from transformers import AutoProcessor, AutoModelForCausalLM
+from transformers import AutoProcessor, AutoModelForCausalLM, BitsAndBytesConfig
 import argparse
 from utils.utils import load_config
 
@@ -59,18 +59,34 @@ def main():
     infer_data_path = config.get("infer_data_path", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/public_test/public_test.json"))
     output_path = config.get("output_path", None)
     attn_implementation = config.get("attn_implementation", "flash_attention_2")
+    use_quantization = config.get("use_8bit_quantization", False)
 
     if model_name == "placeholder":
         from utils.placeholder_model import PlaceholderModel
         model = PlaceholderModel(config)
         processor = None
     else:
+        # Configure 8-bit quantization
+        model_kwargs = {
+            "trust_remote_code": True,
+            "device_map": "auto",
+            "attn_implementation": attn_implementation,
+        }
+        
+        if use_quantization:
+            quantization_config = BitsAndBytesConfig(
+                load_in_8bit=True,
+                llm_int8_threshold=6.0,
+                llm_int8_has_fp16_weight=False,
+            )
+            model_kwargs["quantization_config"] = quantization_config
+            print("Loading model with 8-bit quantization...")
+        else:
+            model_kwargs["torch_dtype"] = torch.bfloat16
+        
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            trust_remote_code=True,
-            device_map="auto",
-            torch_dtype=torch.bfloat16,
-            attn_implementation=attn_implementation,
+            **model_kwargs
         )
         processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
 
