@@ -16,7 +16,7 @@ dependencies = [
 	"imageio-ffmpeg==0.4.9",
 	"torch==2.6.0",
 	"torchvision==0.21.0",
-	"transformers==4.46.3",
+	"transformers==4.57.1",
 	"pyyaml",
 	"accelerate",
 	"decord==0.6.0",
@@ -27,7 +27,6 @@ dependencies = [
 	"pyarrow",
 	"pysubs2",
 	"python-dotenv>=1.2.1",
-	"unsloth>=2025.4.7",
 ]
 
 [tool.uv.sources]

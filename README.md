@@ -2,6 +2,12 @@
 
 This project contains code and resources for training deep learning models for the Road Buddy Challenge in Zalo AI Challenge 2025.
 
+## Prerequisites
+
+- Docker and Docker Compose
+- Python 3.8+
+- CUDA-compatible GPU 
+
 ## Environment Setup
 
 
@@ -25,6 +31,13 @@ uv pip install flash-attn==2.7.3 --no-build-isolation
 ```
 
 Refer to the official instructions for troubleshooting and advanced installation: https://github.com/Dao-AILab/flash-attention#installation
+
+### Unsloth
+Unsloth is a dependency for this project. To install it, follow these steps:
+```bash
+source .venv/bin/activate
+pip install unsloth
+```
 
 ### HuggingFace Access Token
 
