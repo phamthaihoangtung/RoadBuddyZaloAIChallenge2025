@@ -27,6 +27,7 @@ dependencies = [
 	"pyarrow",
 	"pysubs2",
 	"python-dotenv>=1.2.1",
+    # "unsloth[cu118-ampere-torch260] @ git+https://github.com/unslothai/unsloth.git"
 ]
 
 [tool.uv.sources]
@@ -41,3 +42,7 @@ torchvision = [
 name = "pytorch-cu118"
 url = "https://download.pytorch.org/whl/cu118"
 explicit = true
+
+# [tool.uv]
+# # Exclude flash-attn from build isolation to avoid torch dependency issues
+# no-build-isolation-package = ["flash-attn"]
