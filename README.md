@@ -2,29 +2,40 @@
 
 This project contains code and resources for training deep learning models for the Road Buddy Challenge in Zalo AI Challenge 2025.
 
+## Prerequisites
+
+- Docker and Docker Compose
+- Python 3.8+
+- CUDA-compatible GPU 
+
 ## Environment Setup
 
+### Conda Environment
 
-### Python & uv Environment
-
-This project now uses [uv](https://github.com/astral-sh/uv) and `pyproject.toml` for environment management. To set up the environment:
-
-```bash
-pip install uv
-cd <project_path>
-uv venv
-uv pip install -e .
-```
-
-### FlashAttention Installation
-
-FlashAttention cannot be installed directly via requirements.txt. After activating your environment, install it manually:
+This project uses Conda for environment management. To set up the environment:
 
 ```bash
-uv pip install flash-attn==2.7.3 --no-build-isolation
+# Create the conda environment
+conda env create -f environment.yml
+
+# Activate the environment
+conda activate road-buddy
 ```
 
-Refer to the official instructions for troubleshooting and advanced installation: https://github.com/Dao-AILab/flash-attention#installation
+<!-- ### FlashAttention Installation
+
+FlashAttention must be installed manually after the conda environment is set up:
+
+```bash
+# Make sure the road-buddy environment is activated
+conda activate road-buddy
+
+# Install flash-attn
+pip install flash-attn==2.7.3 --no-build-isolation
+``` -->
+
+<!-- Refer to the official instructions for troubleshooting and advanced installation: https://github.com/Dao-AILab/flash-attention#installation -->
+
 
 ### HuggingFace Access Token
 

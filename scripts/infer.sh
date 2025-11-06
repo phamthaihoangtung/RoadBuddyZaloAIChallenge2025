@@ -1,2 +1,2 @@
 #!/bin/bash
-uv run src/infer.py --config configs/config.yaml
+python3 run src/infer.py --config configs/config.yaml

@@ -1,0 +1,23 @@
+name: road-buddy
+channels:
+  - pytorch
+  - nvidia
+  - xformers
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pip
+  
+  # Core dependencies
+  - numpy
+  - pandas
+  - matplotlib
+  - pyyaml
+  - tqdm
+
+  # Additional dependencies via pip
+  - pip:
+      - python-dotenv>=1.2.1
+
