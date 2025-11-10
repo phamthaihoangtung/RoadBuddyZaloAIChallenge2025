@@ -5,7 +5,7 @@ import json
 import csv
 import pandas as pd
 from datetime import datetime
-from transformers import AutoProcessor, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoProcessor, AutoModelForCausalLM, AutoModelForImageTextToText, BitsAndBytesConfig
 import argparse
 from utils.utils import load_config
 from dotenv import load_dotenv
@@ -36,13 +36,38 @@ def predict_conversation(model, processor, video_path, question):
     response = processor.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
     return response
 
+def predict_smolvlm2(model, processor, video_path, question):
+    """Predict using SmolVLM2 with apply_chat_template"""
+    messages = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "video", "path": video_path},
+                {"type": "text", "text": f"Answer the multiple choice question based on the video. Please select one of the provided choices and respond with only the choice letter in A, B, C, or D.\n\n{question}"}
+            ]
+        },
+    ]
+    
+    inputs = processor.apply_chat_template(
+        messages,
+        add_generation_prompt=True,
+        tokenize=True,
+        return_dict=True,
+        return_tensors="pt",
+    ).to(model.device, dtype=torch.bfloat16)
+    
+    generated_ids = model.generate(**inputs, do_sample=False, max_new_tokens=8)
+    generated_texts = processor.batch_decode(
+        generated_ids,
+        skip_special_tokens=True,
+    )
+    
+    return generated_texts[0].strip()
+
 def predict_unsloth(model, tokenizer, video_path, question):
     """Predict using Unsloth FastVisionModel with vision_utils"""
     from unsloth_zoo import vision_utils
-    from unsloth import FastVisionModel
-    
-    FastVisionModel.for_inference(model)
-    
+        
     # Create structured message format
     messages = [
         {"role": "system", "content": "You are a helpful assistant. \
@@ -91,6 +116,9 @@ def save_submission_csv(results, infer_data_path, output_path):
 
 def load_model(model_name, attn_implementation, use_quantization, use_unsloth, hf_token):
     """Load and initialize the model and processor/tokenizer."""
+    # Check if this is a SmolVLM2 model
+    is_smolvlm2 = "smolvlm2" in model_name.lower()
+    
     if model_name == "placeholder":
         from utils.placeholder_model import PlaceholderModel
         model = PlaceholderModel({"model_name": model_name})
@@ -106,7 +134,35 @@ def load_model(model_name, attn_implementation, use_quantization, use_unsloth, h
             use_gradient_checkpointing="unsloth",
             token=hf_token,
         )
+        FastVisionModel.for_inference(model)
         processor = None
+    elif is_smolvlm2:
+        # SmolVLM2 uses AutoModelForImageTextToText
+        model_kwargs = {
+            "trust_remote_code": True,
+            "device_map": "auto",
+            "_attn_implementation": attn_implementation,
+            "token": hf_token,
+        }
+        
+        if use_quantization:
+            quantization_config = BitsAndBytesConfig(
+                load_in_8bit=True,
+                llm_int8_threshold=6.0,
+                llm_int8_has_fp16_weight=False,
+            )
+            model_kwargs["quantization_config"] = quantization_config
+            print("Loading SmolVLM2 model with 8-bit quantization...")
+        else:
+            model_kwargs["torch_dtype"] = torch.bfloat16
+            print("Loading SmolVLM2 model...")
+        
+        model = AutoModelForImageTextToText.from_pretrained(
+            model_name,
+            **model_kwargs
+        )
+        processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True, token=hf_token)
+        tokenizer = None
     else:
         # Configure 8-bit quantization
         model_kwargs = {
@@ -144,6 +200,8 @@ def load_test_data(infer_data_path):
 
 def run_inference(model, processor, tokenizer, test_data, infer_data_path, model_name, use_unsloth):
     """Run inference on test data and return results."""
+    is_smolvlm2 = "smolvlm2" in model_name.lower()
+    
     results = []
     for item in tqdm(test_data["data"]):
         video_path = os.path.join(os.path.dirname(os.path.dirname(infer_data_path)), item["video_path"])
@@ -154,6 +212,8 @@ def run_inference(model, processor, tokenizer, test_data, infer_data_path, model
             response = model.predict(video_path, question)
         elif use_unsloth:
             response = predict_unsloth(model, tokenizer, video_path, question)
+        elif is_smolvlm2:
+            response = predict_smolvlm2(model, processor, video_path, question)
         else:
             response = predict_conversation(model, processor, video_path, question)
         

@@ -4,7 +4,7 @@ epochs: 10
 learning_rate: 0.001
 model_name: "placeholder"
 infer_data_path: "data/public_test/public_test.json"
-attn_implementation: "flash_attention_2"  # Options: "flash_attention_2" or "sdpa"
+# attn_implementation: "flash_attention_2"  # Options: "flash_attention_2" or "sdpa"
 # Set to true to use Unsloth FastVisionModel instead of standard HuggingFace
 use_unsloth: false
 
