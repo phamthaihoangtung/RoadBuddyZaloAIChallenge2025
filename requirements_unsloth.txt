@@ -1,0 +1,23 @@
+# Unsloth Training Requirements
+# Install these packages for training with Unsloth FastVisionModel
+
+# Core training dependencies
+unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git
+unsloth-zoo
+trl
+datasets>=3.4.1,<4.0.0
+
+# Video processing for Unsloth
+qwen-vl-utils  # For Qwen vision models video processing
+torchvision
+
+# Additional dependencies
+peft
+bitsandbytes
+accelerate
+xformers
+triton
+cut_cross_entropy
+
+# Optional for better performance
+flash-attn  # Install manually: pip install flash-attn --no-build-isolation
