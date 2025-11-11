@@ -20,4 +20,5 @@ dependencies:
   # Additional dependencies via pip
   - pip:
       - python-dotenv>=1.2.1
+      - wandb
 

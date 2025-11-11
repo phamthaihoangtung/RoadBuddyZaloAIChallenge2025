@@ -1,13 +1,16 @@
 import yaml
 import os
-import torch
 import json
 import csv
 import pandas as pd
 from datetime import datetime
-from transformers import AutoProcessor, AutoModelForCausalLM, AutoModelForImageTextToText, BitsAndBytesConfig
 import argparse
-from utils.utils import load_config
+from utils.utils import (
+    load_config,
+    load_model,
+    preprocess_for_inference,
+    format_mcq_question,
+)
 from dotenv import load_dotenv
 from tqdm import tqdm
 
@@ -15,92 +18,19 @@ from tqdm import tqdm
 # Load environment variables from .env file
 load_dotenv()
 
-def predict_conversation(model, processor, video_path, question):
-    conversation = [
-        {"role": "system", "content": "You are a helpful assistant. \
-            Answer the multiple choice question based on the video provided.\
-                Please select one of the provided choices and respond with only the choice letter in A, B, C, or D."},
-        {
-            "role": "user",
-            "content": [
-                {"type": "video", "video": {"video_path": video_path, "fps": 1, "max_frames": 128}},
-                {"type": "text", "text": question},
-            ]
-        },
-    ]
-    inputs = processor(conversation=conversation, return_tensors="pt")
-    inputs = {k: v.cuda() if isinstance(v, torch.Tensor) else v for k, v in inputs.items()}
-    if "pixel_values" in inputs:
-        inputs["pixel_values"] = inputs["pixel_values"].to(torch.bfloat16)
-    output_ids = model.generate(**inputs, max_new_tokens=8)
-    response = processor.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
-    return response
-
-def predict_smolvlm2(model, processor, video_path, question):
-    """Predict using SmolVLM2 with apply_chat_template"""
-    messages = [
-        {
-            "role": "user",
-            "content": [
-                {"type": "video", "path": video_path},
-                {"type": "text", "text": f"Answer the multiple choice question based on the video. Please select one of the provided choices and respond with only the choice letter in A, B, C, or D.\n\n{question}"}
-            ]
-        },
-    ]
-    
-    inputs = processor.apply_chat_template(
-        messages,
-        add_generation_prompt=True,
-        tokenize=True,
-        return_dict=True,
-        return_tensors="pt",
-    ).to(model.device, dtype=torch.bfloat16)
-    
-    generated_ids = model.generate(**inputs, do_sample=False, max_new_tokens=8)
-    generated_texts = processor.batch_decode(
-        generated_ids,
-        skip_special_tokens=True,
+def predict_answer(model, processor, tokenizer, video_path, question_text, model_name, use_unsloth):
+    """Unified prediction path using shared preprocessing and decoding."""
+    inputs, decode = preprocess_for_inference(
+        model=model,
+        processor=processor,
+        tokenizer=tokenizer,
+        video_path=video_path,
+        question_text=question_text,
+        model_name=model_name,
+        use_unsloth=use_unsloth,
     )
-    
-    return generated_texts[0].strip()
-
-def predict_unsloth(model, tokenizer, video_path, question):
-    """Predict using Unsloth FastVisionModel with vision_utils"""
-    from unsloth_zoo import vision_utils
-        
-    # Create structured message format
-    messages = [
-        {"role": "system", "content": "You are a helpful assistant. \
-            Answer the multiple choice question based on the video provided. \
-                Please select one of the provided choices and respond with only the choice letter in A, B, C, or D."},
-        {
-            "role": "user",
-            "content": [
-                {"type": "video", "video": video_path},
-                {"type": "text", "text": question}
-            ]
-        }
-    ]
-    
-    # Process vision input using unsloth_zoo vision_utils
-    image_input, video_input = vision_utils.process_vision_info(messages)
-    
-    # Apply chat template
-    input_text = tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
-    
-    # Tokenize inputs
-    inputs = tokenizer(
-        input_text,
-        images=image_input,
-        videos=video_input,
-        return_tensors="pt"
-    ).to(model.device)
-    
-    # Generate response
     output_ids = model.generate(**inputs, max_new_tokens=8)
-    response = tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
-    
-    return response
+    return decode(output_ids)
 
 def save_submission_csv(results, infer_data_path, output_path):
     ts = datetime.now().strftime("%m%d_%H%M%S")
@@ -114,83 +44,6 @@ def save_submission_csv(results, infer_data_path, output_path):
     df.to_csv(output_csv, index=False)
     print(f"Results saved to {output_csv}")
 
-def load_model(model_name, attn_implementation, use_quantization, use_unsloth, hf_token):
-    """Load and initialize the model and processor/tokenizer."""
-    # Check if this is a SmolVLM2 model
-    is_smolvlm2 = "smolvlm2" in model_name.lower()
-    
-    if model_name == "placeholder":
-        from utils.placeholder_model import PlaceholderModel
-        model = PlaceholderModel({"model_name": model_name})
-        processor = None
-        tokenizer = None
-    elif use_unsloth:       
-        from unsloth import FastVisionModel
-        
-        print(f"Loading Unsloth FastVisionModel from {model_name}...")
-        model, tokenizer = FastVisionModel.from_pretrained(
-            model_name,
-            load_in_4bit=use_quantization,
-            use_gradient_checkpointing="unsloth",
-            token=hf_token,
-        )
-        FastVisionModel.for_inference(model)
-        processor = None
-    elif is_smolvlm2:
-        # SmolVLM2 uses AutoModelForImageTextToText
-        model_kwargs = {
-            "trust_remote_code": True,
-            "device_map": "auto",
-            "_attn_implementation": attn_implementation,
-            "token": hf_token,
-        }
-        
-        if use_quantization:
-            quantization_config = BitsAndBytesConfig(
-                load_in_8bit=True,
-                llm_int8_threshold=6.0,
-                llm_int8_has_fp16_weight=False,
-            )
-            model_kwargs["quantization_config"] = quantization_config
-            print("Loading SmolVLM2 model with 8-bit quantization...")
-        else:
-            model_kwargs["torch_dtype"] = torch.bfloat16
-            print("Loading SmolVLM2 model...")
-        
-        model = AutoModelForImageTextToText.from_pretrained(
-            model_name,
-            **model_kwargs
-        )
-        processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True, token=hf_token)
-        tokenizer = None
-    else:
-        # Configure 8-bit quantization
-        model_kwargs = {
-            "trust_remote_code": True,
-            "device_map": "auto",
-            "attn_implementation": attn_implementation,
-            "token": hf_token,
-        }
-        
-        if use_quantization:
-            quantization_config = BitsAndBytesConfig(
-                load_in_8bit=True,
-                llm_int8_threshold=6.0,
-                llm_int8_has_fp16_weight=False,
-            )
-            model_kwargs["quantization_config"] = quantization_config
-            print("Loading model with 8-bit quantization...")
-        else:
-            model_kwargs["torch_dtype"] = torch.bfloat16
-        
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            **model_kwargs
-        )
-        processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True, token=hf_token)
-        tokenizer = None
-    
-    return model, processor, tokenizer
 
 def load_test_data(infer_data_path):
     """Load test data from JSON file."""
@@ -200,22 +53,24 @@ def load_test_data(infer_data_path):
 
 def run_inference(model, processor, tokenizer, test_data, infer_data_path, model_name, use_unsloth):
     """Run inference on test data and return results."""
-    is_smolvlm2 = "smolvlm2" in model_name.lower()
-    
     results = []
     for item in tqdm(test_data["data"]):
         video_path = os.path.join(os.path.dirname(os.path.dirname(infer_data_path)), item["video_path"])
-        # Concatenate question and choices
-        question = item["question"] + " " + " ".join(item.get("choices", []))
-        
-        if model_name == "placeholder":
-            response = model.predict(video_path, question)
-        elif use_unsloth:
-            response = predict_unsloth(model, tokenizer, video_path, question)
-        elif is_smolvlm2:
-            response = predict_smolvlm2(model, processor, video_path, question)
-        else:
-            response = predict_conversation(model, processor, video_path, question)
+        # Build consistent MCQ prompt
+        question_text = format_mcq_question(item["question"], item.get("choices", []))
+        response = (
+            model.predict(video_path, question_text)
+            if model_name == "placeholder"
+            else predict_answer(
+                model=model,
+                processor=processor,
+                tokenizer=tokenizer,
+                video_path=video_path,
+                question_text=question_text,
+                model_name=model_name,
+                use_unsloth=use_unsloth,
+            )
+        )
         
         results.append({"id": item.get("id", ""), "answer": response})
         # print(f"Processed {item.get('id', 'unknown')} -> {response}")
@@ -241,12 +96,46 @@ def main():
     use_quantization = config.get("use_8bit_quantization", False)
     use_unsloth = config.get("use_unsloth", False)
     
-    # Get HuggingFace token from environment
+    # Wandb configuration
+    use_wandb = config.get("use_wandb", False)
+    wandb_project = config.get("wandb_project", "road-buddy-inference")
+    wandb_run_name = config.get("wandb_run_name", None)
+    wandb_tags = config.get("wandb_tags", [])
+    
+    # Get tokens from environment
     hf_token = os.getenv("HF_TOKEN")
+    wandb_api_key = os.getenv("WANDB_API_KEY")
+    
+    # Initialize wandb if enabled
+    if use_wandb:
+        wandb = __import__('wandb')
+        # Set wandb API key if provided
+        if wandb_api_key:
+            os.environ["WANDB_API_KEY"] = wandb_api_key
+        
+        wandb.init(
+            project=wandb_project,
+            name=wandb_run_name,
+            tags=wandb_tags,
+            config=config,  # Log all config settings
+            settings=wandb.Settings(
+                console="wrap",  # Log console output
+                _disable_stats=False,  # Enable system performance logging
+            )
+        )
+        print(f"Wandb run initialized: {wandb.run.name}")
+        print(f"Wandb run URL: {wandb.run.url}")
     
     # Load model
     print("Loading model...")
-    model, processor, tokenizer = load_model(model_name, attn_implementation, use_quantization, use_unsloth, hf_token)
+    model, processor, tokenizer = load_model(
+        model_name=model_name,
+        attn_implementation=attn_implementation,
+        use_quantization=use_quantization,
+        use_unsloth=use_unsloth,
+        hf_token=hf_token,
+        inference_mode=True,
+    )
     
     # Load test data
     print("Loading test data...")
@@ -259,6 +148,11 @@ def main():
     # Save results
     print("Saving results...")
     save_submission_csv(results, infer_data_path, output_path)
+    
+    # Finish wandb run
+    if use_wandb:
+        wandb = __import__('wandb')
+        wandb.finish()
 
 if __name__ == "__main__":
     main()
