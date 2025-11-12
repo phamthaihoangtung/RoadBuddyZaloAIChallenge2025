@@ -29,3 +29,5 @@ logs/**
 .env
 
 unsloth_compiled_cache
+
+models/*
