@@ -1,15 +1,14 @@
 # Example configuration for training
-batch_size: 32
-epochs: 10
-learning_rate: 0.001
-model_name: "unsloth/Qwen3-VL-2B-Instruct-unsloth-bnb-4bit"
+batch_size: 1
+epochs: 2
+learning_rate: 2e-4
+model_name: "unsloth/Qwen3-VL-8B-Instruct"
+# model_name: "unsloth/Qwen2.5-VL-3B-Instruct-unsloth-bnb-4bit"
+# model_name: "models/unsloth_lora"
 infer_data_path: "data/public_test/public_test.json"
 use_unsloth: true
-use_quantization: true
 
-# For Unsloth, recommended model names:
-# - "unsloth/Qwen2.5-VL-7B-Instruct-bnb-4bit"
-# - "unsloth/Qwen2.5-VL-7B-Instruct"
-
-# When use_unsloth is true, use_8bit_quantization controls load_in_4bit for Unsloth
-# (Unsloth uses 4-bit by default when quantization is enabled)
+# Quantization: Unsloth currently honors only 4bit via load_in_4bit
+quantization:
+  enabled: true
+  mode: "4bit"

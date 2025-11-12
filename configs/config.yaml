@@ -5,8 +5,18 @@ learning_rate: 0.001
 model_name: "placeholder"
 infer_data_path: "data/public_test/public_test.json"
 attn_implementation: "flash_attention_2"  # Options: "flash_attention_2" or "sdpa"
-# Set to true to use Unsloth FastVisionModel instead of standard HuggingFace
 use_unsloth: false
+
+# Quantization settings (new unified format)
+quantization:
+  enabled: false
+  mode: "8bit"  # Options: "4bit" or "8bit"; Unsloth honors only "4bit"
+
+# Wandb configuration for inference tracking
+use_wandb: false  # Set to true to enable wandb logging
+wandb_project: "road-buddy-inference"  # Wandb project name
+wandb_run_name: null  # Optional: custom run name (auto-generated if null)
+wandb_tags: []  # Optional: list of tags for the run
 
 # For Unsloth, recommended model names:
 # - "unsloth/Qwen2.5-VL-7B-Instruct-bnb-4bit"
@@ -19,4 +29,6 @@ use_unsloth: false
 # model_name: "HuggingFaceTB/SmolVLM2-2.2B-Video-Instruct"  # or SmolVLM2-500M-Video-Instruct
 # model_name: "HuggingFaceTB/SmolVLM2-500M-Video-Instruct"
 # attn_implementation: "flash_attention_2"
-# use_8bit_quantization: false  # Optional: set to true for lower memory usage
+# quantization:
+#   enabled: true
+#   mode: "8bit"

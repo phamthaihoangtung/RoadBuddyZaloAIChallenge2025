@@ -8,6 +8,11 @@ infer_data_path: "data/public_test/public_test.json"
 # Set to true to use Unsloth FastVisionModel instead of standard HuggingFace
 use_unsloth: false
 
+# Quantization settings
+quantization:
+  enabled: false
+  mode: "8bit"
+
 # For Unsloth, recommended model names:
 # - "unsloth/Qwen2.5-VL-7B-Instruct-bnb-4bit"
 # - "unsloth/Qwen2.5-VL-7B-Instruct"
