@@ -1,5 +1,8 @@
-import yaml
 import os
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
+os.environ["UNSLOTH_STABLE_DOWNLOADS"] = "1"
+
+import yaml
 import json
 import csv
 import pandas as pd
@@ -13,7 +16,8 @@ from utils.utils import (
 )
 from dotenv import load_dotenv
 from tqdm import tqdm
-
+import unsloth
+from utils.postprocessing import post_process_qwen3vl_output  # <- add import
 
 # Load environment variables from .env file
 load_dotenv()
@@ -51,9 +55,12 @@ def load_test_data(infer_data_path):
         test_data = json.load(f)
     return test_data
 
-def run_inference(model, processor, tokenizer, test_data, infer_data_path, model_name, use_unsloth):
+def run_inference(model, processor, tokenizer, test_data, infer_data_path, model_name, use_unsloth, DEBUG=False):
     """Run inference on test data and return results."""
     results = []
+    if DEBUG:
+        test_data["data"] = test_data["data"][:5]  # Limit to first 5 samples in debug mode
+
     for item in tqdm(test_data["data"]):
         video_path = os.path.join(os.path.dirname(os.path.dirname(infer_data_path)), item["video_path"])
         # Build consistent MCQ prompt
@@ -71,18 +78,38 @@ def run_inference(model, processor, tokenizer, test_data, infer_data_path, model
                 use_unsloth=use_unsloth,
             )
         )
+        # Apply Qwen VL post-processing
+        # if "qwen" in model_name.lower() and "vl" in model_name.lower():
+        # TODO: Enable conditionally based on model_type
+        response = post_process_qwen3vl_output(response)
         
         results.append({"id": item.get("id", ""), "answer": response})
         # print(f"Processed {item.get('id', 'unknown')} -> {response}")
     
     return results
 
+def _normalize_quantization(cfg: dict) -> dict:
+    """Support new 'quantization' block and legacy flags."""
+    q = cfg.get("quantization")
+    if q is not None:
+        return {
+            "enabled": bool(q.get("enabled", False)),
+            "mode": str(q.get("mode", "8bit")).lower(),
+        }
+    # Legacy: use_8bit_quantization => 8bit
+    if "use_8bit_quantization" in cfg:
+        return {"enabled": bool(cfg.get("use_8bit_quantization", False)), "mode": "8bit"}
+    # Legacy: use_quantization => assume 4bit (used for Unsloth earlier)
+    if "use_quantization" in cfg:
+        return {"enabled": bool(cfg.get("use_quantization", False)), "mode": "4bit"}
+    return {"enabled": False, "mode": "8bit"}
+
 def main():
     parser = argparse.ArgumentParser(description="Run inference for Road Buddy Challenge")
     parser.add_argument(
         "--config",
         type=str,
-        default="configs/config.yaml",
+        default="configs/config_unsloth.yaml",
         help="Path to configuration file (default: configs/config.yaml)"
     )
     args = parser.parse_args()
@@ -93,7 +120,7 @@ def main():
     infer_data_path = config.get("infer_data_path", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/public_test/public_test.json"))
     output_path = config.get("output_path", None)
     attn_implementation = config.get("attn_implementation", "flash_attention_2")
-    use_quantization = config.get("use_8bit_quantization", False)
+    quantization = _normalize_quantization(config)
     use_unsloth = config.get("use_unsloth", False)
     
     # Wandb configuration
@@ -131,7 +158,7 @@ def main():
     model, processor, tokenizer = load_model(
         model_name=model_name,
         attn_implementation=attn_implementation,
-        use_quantization=use_quantization,
+        quantization=quantization,
         use_unsloth=use_unsloth,
         hf_token=hf_token,
         inference_mode=True,
