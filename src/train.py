@@ -109,10 +109,12 @@ def build_lora_model(base_model, tokenizer, config: Dict[str, Any]):
 def get_training_args(output_dir: str, config: Dict[str, Any]):
     total_epochs = config.get("epochs", 1)
     batch_size = config.get("batch_size", 1)
-    lr = config.get("learning_rate", 2e-4)
+    lr = float(config.get("learning_rate", 2e-4))
     gradient_accumulation = config.get("grad_accum_steps", 1)
     warmup = config.get("warmup_steps", 5)
     max_steps = config.get("max_steps")  # optional override
+    
+    print("Initial LR:", lr)
 
     # Prefer SFTConfig directly for TRL
     if SFTConfig is None:
