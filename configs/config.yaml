@@ -22,13 +22,5 @@ wandb_tags: []  # Optional: list of tags for the run
 # - "unsloth/Qwen2.5-VL-7B-Instruct-bnb-4bit"
 # - "unsloth/Qwen2.5-VL-7B-Instruct"
 
-# When use_unsloth is true, use_8bit_quantization controls load_in_4bit for Unsloth
+# When use_unsloth is true, quantization controls load_in_4bit for Unsloth
 # (Unsloth uses 4-bit by default when quantization is enabled)
-
-# Example SmolVLM2 configuration (uncomment to use)
-# model_name: "HuggingFaceTB/SmolVLM2-2.2B-Video-Instruct"  # or SmolVLM2-500M-Video-Instruct
-# model_name: "HuggingFaceTB/SmolVLM2-500M-Video-Instruct"
-# attn_implementation: "flash_attention_2"
-# quantization:
-#   enabled: true
-#   mode: "8bit"

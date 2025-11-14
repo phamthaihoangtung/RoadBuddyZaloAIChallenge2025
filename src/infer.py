@@ -1,52 +1,99 @@
+import argparse
 import os
 # os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 # os.environ["UNSLOTH_STABLE_DOWNLOADS"] = "1"
 
-import yaml
 import json
-import csv
+from typing import Callable, Dict, Tuple
 import pandas as pd
 from datetime import datetime
-import argparse
+
+import torch
+import unsloth
+
 from utils.utils import (
     load_config,
-    load_model,
+    normalize_quantization,
     preprocess_for_inference,
-    format_mcq_question,
+    save_submission_csv,
 )
 from dotenv import load_dotenv
 from tqdm import tqdm
-import unsloth
-from utils.postprocessing import post_process_qwen3vl_output  # <- add import
+
+from models.utils import load_model
+from data import build_user_content
 
 # Load environment variables from .env file
 load_dotenv()
 
-def predict_answer(model, processor, tokenizer, video_path, question_text, model_name, use_unsloth):
+def preprocess_for_inference(
+    model,
+    processor,
+    tokenizer,
+    messages,
+    model_name: str,
+    use_unsloth: bool,
+) -> Tuple[Dict[str, torch.Tensor], Callable[[torch.Tensor], str]]:
+    """Create tokenized inputs for generation and a decode function.
+
+    Returns (inputs, decode_fn). inputs are on the correct device with proper dtype.
+    decode_fn takes output_ids and returns a string.
+    """
+    if model_name == "placeholder":
+        def _decode(ids):
+            return "A"  # placeholder
+
+        return {}, _decode
+
+    if use_unsloth:
+        # Unsloth pipeline uses tokenizer + unsloth_zoo vision_utils
+        try:
+            from unsloth_zoo import vision_utils
+        except ImportError as e:
+            raise ImportError(
+                "Unsloth requested but unsloth_zoo not installed. Install with: pip install unsloth-zoo"
+            ) from e
+
+        image_input, video_input = vision_utils.process_vision_info(messages)
+        input_text = tokenizer.apply_chat_template(
+            messages, add_generation_prompt=True, tokenize=False
+        )
+        inputs = tokenizer(
+            text=input_text,
+            images=image_input,
+            videos=video_input,
+            padding=True,
+            return_tensors="pt",
+        ).to(model.device)
+
+        def _decode(output_ids: torch.Tensor) -> str:
+            return tokenizer.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
+
+        return inputs, _decode
+    else:
+        inputs = processor(conversation=messages, return_tensors="pt")
+        # Move to device and set dtypes
+        inputs = {k: (v.cuda() if isinstance(v, torch.Tensor) else v) for k, v in inputs.items()}
+        if "pixel_values" in inputs and isinstance(inputs["pixel_values"], torch.Tensor):
+            inputs["pixel_values"] = inputs["pixel_values"].to(torch.bfloat16)
+
+        def _decode(output_ids: torch.Tensor) -> str:
+            return processor.batch_decode(output_ids, skip_special_tokens=True)[0].strip()
+
+        return inputs, _decode
+
+def predict_answer(model, processor, tokenizer, messages, model_name, use_unsloth):
     """Unified prediction path using shared preprocessing and decoding."""
     inputs, decode = preprocess_for_inference(
         model=model,
         processor=processor,
         tokenizer=tokenizer,
-        video_path=video_path,
-        question_text=question_text,
+        messages=messages,
         model_name=model_name,
         use_unsloth=use_unsloth,
     )
     output_ids = model.generate(**inputs, max_new_tokens=8)
     return decode(output_ids)
-
-def save_submission_csv(results, infer_data_path, output_path):
-    ts = datetime.now().strftime("%m%d_%H%M%S")
-    if output_path is None:
-        # Place submission in a 'submission' folder at same level as infer_data_path
-        submission_dir = os.path.join(os.path.dirname(infer_data_path), "submission")
-        os.makedirs(submission_dir, exist_ok=True)
-        output_path = submission_dir
-    output_csv = os.path.join(output_path, f"submission_{ts}.csv")
-    df = pd.DataFrame(results)
-    df.to_csv(output_csv, index=False)
-    print(f"Results saved to {output_csv}")
 
 
 def load_test_data(infer_data_path):
@@ -62,47 +109,23 @@ def run_inference(model, processor, tokenizer, test_data, infer_data_path, model
         test_data["data"] = test_data["data"][:5]  # Limit to first 5 samples in debug mode
 
     for item in tqdm(test_data["data"]):
-        video_path = os.path.join(os.path.dirname(os.path.dirname(infer_data_path)), item["video_path"])
-        # Build consistent MCQ prompt
-        question_text = format_mcq_question(item["question"], item.get("choices", []))
+        messages = build_user_content(item["video_path"], item["question"], item["choices"], use_unsloth)
         response = (
-            model.predict(video_path, question_text)
+            model.predict(messages)
             if model_name == "placeholder"
             else predict_answer(
                 model=model,
                 processor=processor,
                 tokenizer=tokenizer,
-                video_path=video_path,
-                question_text=question_text,
+                messages=messages,
                 model_name=model_name,
                 use_unsloth=use_unsloth,
             )
         )
-        # Apply Qwen VL post-processing
-        # if "qwen" in model_name.lower() and "vl" in model_name.lower():
-        # TODO: Enable conditionally based on model_type
-        # response = post_process_qwen3vl_output(response)
-        
+       
         results.append({"id": item.get("id", ""), "answer": response})
-        # print(f"Processed {item.get('id', 'unknown')} -> {response}")
     
     return results
-
-def _normalize_quantization(cfg: dict) -> dict:
-    """Support new 'quantization' block and legacy flags."""
-    q = cfg.get("quantization")
-    if q is not None:
-        return {
-            "enabled": bool(q.get("enabled", False)),
-            "mode": str(q.get("mode", "8bit")).lower(),
-        }
-    # Legacy: use_8bit_quantization => 8bit
-    if "use_8bit_quantization" in cfg:
-        return {"enabled": bool(cfg.get("use_8bit_quantization", False)), "mode": "8bit"}
-    # Legacy: use_quantization => assume 4bit (used for Unsloth earlier)
-    if "use_quantization" in cfg:
-        return {"enabled": bool(cfg.get("use_quantization", False)), "mode": "4bit"}
-    return {"enabled": False, "mode": "8bit"}
 
 def main():
     parser = argparse.ArgumentParser(description="Run inference for Road Buddy Challenge")
@@ -117,10 +140,11 @@ def main():
     # Load configuration
     config = load_config(args.config)
     model_name = config.get("model_name", "DAMO-NLP-SG/VideoLLaMA3-7B")
-    infer_data_path = config.get("infer_data_path", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/public_test/public_test.json"))
+    infer_data_path = config.get("infer_data_path", 
+                                 os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/public_test/public_test.json"))
     output_path = config.get("output_path", None)
     attn_implementation = config.get("attn_implementation", "flash_attention_2")
-    quantization = _normalize_quantization(config)
+    quantization = normalize_quantization(config)
     use_unsloth = config.get("use_unsloth", False)
     
     # Wandb configuration
@@ -136,19 +160,11 @@ def main():
     # Initialize wandb if enabled
     if use_wandb:
         wandb = __import__('wandb')
-        # Set wandb API key if provided
-        if wandb_api_key:
-            os.environ["WANDB_API_KEY"] = wandb_api_key
-        
         wandb.init(
             project=wandb_project,
             name=wandb_run_name,
             tags=wandb_tags,
             config=config,  # Log all config settings
-            settings=wandb.Settings(
-                console="wrap",  # Log console output
-                _disable_stats=False,  # Enable system performance logging
-            )
         )
         print(f"Wandb run initialized: {wandb.run.name}")
         print(f"Wandb run URL: {wandb.run.url}")

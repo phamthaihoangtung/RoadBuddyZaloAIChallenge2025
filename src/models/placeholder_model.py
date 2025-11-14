@@ -4,5 +4,5 @@ class PlaceholderModel:
     def __init__(self, config=None):
         pass
 
-    def predict(self, video_path, question):
+    def predict(self, messages):
         return random.choice(['A', 'B', 'C', 'D'])

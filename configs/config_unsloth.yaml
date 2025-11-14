@@ -5,6 +5,7 @@ learning_rate: 2e-4
 model_name: "unsloth/Qwen3-VL-8B-Instruct"
 # model_name: "unsloth/Qwen2.5-VL-3B-Instruct-unsloth-bnb-4bit"
 # model_name: "models/unsloth_lora"
+train_data_path: "data/public_train/public_train.json"
 infer_data_path: "data/public_test/public_test.json"
 use_unsloth: true
 
@@ -12,3 +13,6 @@ use_unsloth: true
 quantization:
   enabled: true
   mode: "4bit"
+
+lora:
+  r: 16
