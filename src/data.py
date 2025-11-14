@@ -23,22 +23,24 @@ def format_mcq_question(question: str, choices: Optional[list]) -> str:
         return f"{base_instr}\n\n{question} {' '.join(choices)}"
     return f"{base_instr}\n\n{question}"
 
-def build_user_content(video_path: str, question: str, choices: str, use_unsloth: bool) -> list:
+def build_user_content(video_path: str, question: str, choices: Optional[list], use_unsloth: bool) -> dict:
     video_path = video_abs_path(video_path)
     question = format_mcq_question(question, choices)
 
     """Construct user content for conversation sample based on format."""
     if use_unsloth:
-        return [
+        return {"role": "user", "content": [
             {"type": "video", "video": video_path},
             {"type": "text", "text": question},
-        ]
+            ]
+            }
     else:
         # Generic processor format (with metadata structure) if not using Unsloth
-        return [
+        return {"role": "user", "content":[
             {"type": "video", "video": {"video_path": video_path, "fps": 1, "max_frames": 128}},
             {"type": "text", "text": question},
         ]
+        }
 
 class RoadBuddyVideoDataset(Dataset):
     """Dataset converting train.json rows into Unsloth vision conversation format.
@@ -71,7 +73,7 @@ class RoadBuddyVideoDataset(Dataset):
             answer_text = (raw_ans or "A").strip()[:1]
 
         sample = [
-            {"role": "user", "content": user_content},
+            user_content,
             {"role": "assistant", "content": [{"type": "text", "text": answer_text}]},
         ]
         return ConversationSample(messages=sample)

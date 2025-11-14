@@ -33,12 +33,16 @@ def video_abs_path(rel: str) -> str:
 
 def save_submission_csv(results, infer_data_path, output_path):
     ts = datetime.now().strftime("%m%d_%H%M%S")
-    if output_path is None:
-        # Place submission in a 'submission' folder at same level as infer_data_path
+    # Determine target directory
+    if not output_path:
         submission_dir = os.path.join(os.path.dirname(infer_data_path), "submission")
-        os.makedirs(submission_dir, exist_ok=True)
-        output_path = submission_dir
-    output_csv = os.path.join(output_path, f"submission_{ts}.csv")
+        output_dir = submission_dir
+    else:
+        output_dir = output_path
+    # Ensure directory exists
+    os.makedirs(output_dir, exist_ok=True)
+
+    output_csv = os.path.join(output_dir, f"submission_{ts}.csv")
     df = pd.DataFrame(results)
     df.to_csv(output_csv, index=False)
     print(f"Results saved to {output_csv}")

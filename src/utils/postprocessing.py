@@ -77,8 +77,8 @@ def post_process_qwen3vl_output(output: str) -> str:
 
 if __name__ == "__main__":
     # Read input CSV file
-    input_path = "data/public_test/submission/submission_fps_1.csv"
-    output_path = "data/public_test/submission/processed_submission_fps_1.csv"
+    input_path = "data/public_test/submission/submission_1114_232417.csv"
+    output_path = "data/public_test/submission/submission_1114_232417_postprocessed.csv"
     
     # Load the CSV file
     df = pd.read_csv(input_path)

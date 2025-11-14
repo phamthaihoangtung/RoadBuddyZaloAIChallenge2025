@@ -14,7 +14,6 @@ import unsloth
 from utils.utils import (
     load_config,
     normalize_quantization,
-    preprocess_for_inference,
     save_submission_csv,
 )
 from dotenv import load_dotenv
@@ -44,6 +43,8 @@ def preprocess_for_inference(
             return "A"  # placeholder
 
         return {}, _decode
+
+    messages = [messages]
 
     if use_unsloth:
         # Unsloth pipeline uses tokenizer + unsloth_zoo vision_utils
@@ -149,25 +150,23 @@ def main():
     
     # Wandb configuration
     use_wandb = config.get("use_wandb", False)
-    wandb_project = config.get("wandb_project", "road-buddy-inference")
     wandb_run_name = config.get("wandb_run_name", None)
-    wandb_tags = config.get("wandb_tags", [])
     
     # Get tokens from environment
     hf_token = os.getenv("HF_TOKEN")
-    wandb_api_key = os.getenv("WANDB_API_KEY")
     
     # Initialize wandb if enabled
     if use_wandb:
-        wandb = __import__('wandb')
+        import trackio as wandb
+        # wandb_api_key = os.getenv("WANDB_API_KEY")
         wandb.init(
-            project=wandb_project,
+            project="road-buddy",
+            space_id='tryourbest/road-buddy-tracking',
             name=wandb_run_name,
-            tags=wandb_tags,
             config=config,  # Log all config settings
         )
-        print(f"Wandb run initialized: {wandb.run.name}")
-        print(f"Wandb run URL: {wandb.run.url}")
+        # print(f"Wandb run initialized: {wandb.run.name}")
+        # print(f"Wandb run URL: {wandb.run.url}")
     
     # Load model
     print("Loading model...")

@@ -43,13 +43,14 @@ def get_training_args(output_model_path: str, config: Dict[str, Any]):
             learning_rate=lr,
             warmup_steps=warmup,
             num_train_epochs=total_epochs,
+            # max_steps=10,
             logging_steps=config.get("logging_steps", 10),
             save_steps=config.get("save_steps", 500),
             save_total_limit=config.get("save_total_limit", 3),
             fp16=config.get("fp16", False),
             bf16=config.get("bf16", True),
             optim="adamw_torch",
-            report_to=["none"],
+            report_to=["trackio"] if config.get("use_wandb", False) else ["none"],
         )
     return SFTConfig(
         output_dir=output_model_path,
@@ -58,13 +59,14 @@ def get_training_args(output_model_path: str, config: Dict[str, Any]):
         learning_rate=lr,
         warmup_steps=warmup,
         num_train_epochs=total_epochs,
+        # max_steps=10,
         logging_steps=config.get("logging_steps", 10),
         save_steps=config.get("save_steps", 500),
         save_total_limit=config.get("save_total_limit", 3),
         fp16=config.get("fp16", False),
         bf16=config.get("bf16", True),
         optim="adamw_8bit",
-        report_to=["none"],
+        report_to=["trackio"] if config.get("use_wandb", False) else ["none"],
 
         # Required for Unsloth vision finetuning:
         remove_unused_columns=False,
@@ -102,6 +104,26 @@ def main():
     # Read train_data_path and output_model_path from config, allow CLI override
     train_data_path = config.get("train_data_path", "data/train/train.json")
     output_model_path = config.get("output_model_path", "models/unsloth_lora")
+
+    # Wandb configuration
+    use_wandb = config.get("use_wandb", False)
+    wandb_run_name = config.get("wandb_run_name", None)
+
+    # Initialize wandb if enabled
+    if use_wandb:
+        # Get tokens from environment
+        # wandb_api_key = os.getenv("WANDB_API_KEY")
+        # wandb = __import__('wandb')
+        import trackio as wandb
+        wandb.init(
+            project="road-buddy",
+            space_id='tryourbest/road-buddy-tracking',
+            name=wandb_run_name,
+            config=config,  # Log all config settings
+            private=True,
+        )
+        # print(f"Wandb run initialized: {wandb.run.name}")
+        # print(f"Wandb run URL: {wandb.run.url}")
 
     # Load base model (training mode)
     model, processor, tokenizer = load_model(
