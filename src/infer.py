@@ -1,6 +1,6 @@
 import os
-os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
-os.environ["UNSLOTH_STABLE_DOWNLOADS"] = "1"
+# os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
+# os.environ["UNSLOTH_STABLE_DOWNLOADS"] = "1"
 
 import yaml
 import json
@@ -81,7 +81,7 @@ def run_inference(model, processor, tokenizer, test_data, infer_data_path, model
         # Apply Qwen VL post-processing
         # if "qwen" in model_name.lower() and "vl" in model_name.lower():
         # TODO: Enable conditionally based on model_type
-        response = post_process_qwen3vl_output(response)
+        # response = post_process_qwen3vl_output(response)
         
         results.append({"id": item.get("id", ""), "answer": response})
         # print(f"Processed {item.get('id', 'unknown')} -> {response}")
