@@ -1,1 +1,1 @@
-python src/train.py --config configs/config_unsloth.yaml --train_json data/train/train.json --output_dir models/unsloth_lora
+python src/train.py --config configs/config_unsloth.yaml
