@@ -83,7 +83,7 @@ def preprocess_for_inference(
 
         return inputs, _decode
 
-def predict_answer(model, processor, tokenizer, messages, model_name, use_unsloth):
+def predict_answer(model, processor, tokenizer, messages, model_name, use_unsloth, max_new_tokens: int):
     """Unified prediction path using shared preprocessing and decoding."""
     inputs, decode = preprocess_for_inference(
         model=model,
@@ -93,7 +93,7 @@ def predict_answer(model, processor, tokenizer, messages, model_name, use_unslot
         model_name=model_name,
         use_unsloth=use_unsloth,
     )
-    output_ids = model.generate(**inputs, max_new_tokens=256)
+    output_ids = model.generate(**inputs, max_new_tokens=max_new_tokens)
     return decode(output_ids)
 
 
@@ -103,14 +103,27 @@ def load_test_data(infer_data_path):
         test_data = json.load(f)
     return test_data
 
-def run_inference(model, processor, tokenizer, test_data, model_name, use_unsloth, post_process=False, DEBUG=False):
+def run_inference(
+    model,
+    processor,
+    tokenizer,
+    test_data,
+    model_name,
+    use_unsloth,
+    thinking_enabled: bool = False,
+    max_new_tokens: int = 256,
+    post_process: bool = False,
+    DEBUG: bool = False,
+):
     """Run inference on test data and return results."""
     results = []
     if DEBUG:
         test_data["data"] = test_data["data"][:10]  # Limit to first 10 samples in debug mode
 
     for item in tqdm(test_data["data"]):
-        messages = build_user_content(item["video_path"], item["question"], item["choices"], use_unsloth)
+        messages = build_user_content(
+            item["video_path"], item["question"], item["choices"], use_unsloth, thinking_enabled
+        )
         response = (
             model.predict(messages)
             if model_name == "placeholder"
@@ -121,6 +134,7 @@ def run_inference(model, processor, tokenizer, test_data, model_name, use_unslot
                 messages=messages,
                 model_name=model_name,
                 use_unsloth=use_unsloth,
+                max_new_tokens=max_new_tokens,
             )
         )
         if post_process:
@@ -148,6 +162,11 @@ def main():
     attn_implementation = config.get("attn_implementation", "flash_attention_2")
     quantization = normalize_quantization(config)
     use_unsloth = config.get("use_unsloth", False)
+
+    # Thinking config
+    thinking_cfg = config.get("thinking", {}) or {}
+    thinking_enabled = bool(thinking_cfg.get("enabled", False))
+    max_new_tokens = int(thinking_cfg.get("max_new_tokens", 256 if thinking_enabled else 8))
     
     # Wandb configuration
     use_wandb = config.get("use_wandb", False)
@@ -166,8 +185,6 @@ def main():
             name=wandb_run_name,
             config=config,  # Log all config settings
         )
-        # print(f"Wandb run initialized: {wandb.run.name}")
-        # print(f"Wandb run URL: {wandb.run.url}")
     
     # Load model
     print("Loading model...")
@@ -186,7 +203,13 @@ def main():
     
     # Run inference
     print("Running inference...")
-    results = run_inference(model, processor, tokenizer, test_data, infer_data_path, model_name, use_unsloth)
+    results = run_inference(
+        model, processor, tokenizer, test_data,
+        model_name=model_name,
+        use_unsloth=use_unsloth,
+        thinking_enabled=thinking_enabled,
+        max_new_tokens=max_new_tokens,
+    )
     
     # Save results
     print("Saving results...")

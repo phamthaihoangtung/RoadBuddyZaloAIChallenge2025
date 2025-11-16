@@ -105,6 +105,9 @@ def main():
     train_data_path = config.get("train_data_path", "data/train/train.json")
     output_model_path = config.get("output_model_path", "models/unsloth_lora")
 
+    # Thinking config
+    thinking_enabled = bool((config.get("thinking", {}) or {}).get("enabled", False))
+
     # Wandb configuration
     use_wandb = config.get("use_wandb", False)
     wandb_run_name = config.get("wandb_run_name", None)
@@ -138,7 +141,7 @@ def main():
     # Apply LoRA adapters if Unsloth
     model, tokenizer = build_lora_model(model, tokenizer, config)
 
-    dataset = RoadBuddyVideoDataset(train_data_path, use_unsloth=use_unsloth)
+    dataset = RoadBuddyVideoDataset(train_data_path, use_unsloth=use_unsloth, thinking_enabled=thinking_enabled)
 
     # Prepare SFT trainer
     if SFTTrainer is None:
