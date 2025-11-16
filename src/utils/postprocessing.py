@@ -8,6 +8,7 @@ for the Road Buddy Challenge, ensuring answers are in the correct format (A, B, 
 import re
 import pandas as pd
 from pathlib import Path
+import argparse
 
 
 def post_process_qwen3vl_output(output: str) -> str:
@@ -75,23 +76,37 @@ def post_process_qwen3vl_output(output: str) -> str:
     return 'A'
 
 
+def _default_output_path(input_path: str) -> str:
+    """
+    Derive default output path by appending '_postprocessed' before the CSV suffix.
+    """
+    p = Path(input_path)
+    if p.suffix.lower() == ".csv":
+        return str(p.with_name(f"{p.stem}_postprocessed{p.suffix}"))
+    return str(p.with_name(f"{p.name}_postprocessed.csv"))
+
+
 if __name__ == "__main__":
-    # Read input CSV file
-    input_path = "data/public_test/submission/submission_1114_232417.csv"
-    output_path = "data/public_test/submission/submission_1114_232417_postprocessed.csv"
-    
+    parser = argparse.ArgumentParser(description="Post-process Qwen3-VL CSV outputs.")
+    parser.add_argument("--input_path", help="Path to input CSV containing an 'answer' column.")
+    parser.add_argument("--output_path", help="Path to save post-processed CSV. Defaults to <input>_postprocessed.csv")
+    args = parser.parse_args()
+
+    input_path = args.input_path
+    output_path = args.output_path or _default_output_path(input_path)
+
     # Load the CSV file
     df = pd.read_csv(input_path)
-    
+
     print(f"Processing {len(df)} rows from {input_path}")
     print("=" * 60)
-    
+
     # Apply post-processing to each answer
     df['answer'] = df['answer'].apply(post_process_qwen3vl_output)
-    
+
     # Save to output file
     df.to_csv(output_path, index=False)
-    
+
     print(f"Processed results saved to: {output_path}")
     print("\nFirst 10 processed rows:")
     print(df.head(10).to_string(index=False))
