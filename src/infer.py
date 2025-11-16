@@ -1,11 +1,10 @@
 import argparse
 import os
-# os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
-# os.environ["UNSLOTH_STABLE_DOWNLOADS"] = "1"
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
+os.environ["UNSLOTH_STABLE_DOWNLOADS"] = "1"
 
 import json
 from typing import Callable, Dict, Tuple
-import pandas as pd
 from datetime import datetime
 
 import torch
@@ -16,6 +15,7 @@ from utils.utils import (
     normalize_quantization,
     save_submission_csv,
 )
+from utils.postprocessing import post_process_qwen3vl_output
 from dotenv import load_dotenv
 from tqdm import tqdm
 
@@ -93,7 +93,7 @@ def predict_answer(model, processor, tokenizer, messages, model_name, use_unslot
         model_name=model_name,
         use_unsloth=use_unsloth,
     )
-    output_ids = model.generate(**inputs, max_new_tokens=8)
+    output_ids = model.generate(**inputs, max_new_tokens=256)
     return decode(output_ids)
 
 
@@ -103,11 +103,11 @@ def load_test_data(infer_data_path):
         test_data = json.load(f)
     return test_data
 
-def run_inference(model, processor, tokenizer, test_data, infer_data_path, model_name, use_unsloth, DEBUG=False):
+def run_inference(model, processor, tokenizer, test_data, model_name, use_unsloth, post_process=False, DEBUG=False):
     """Run inference on test data and return results."""
     results = []
     if DEBUG:
-        test_data["data"] = test_data["data"][:5]  # Limit to first 5 samples in debug mode
+        test_data["data"] = test_data["data"][:10]  # Limit to first 10 samples in debug mode
 
     for item in tqdm(test_data["data"]):
         messages = build_user_content(item["video_path"], item["question"], item["choices"], use_unsloth)
@@ -123,7 +123,8 @@ def run_inference(model, processor, tokenizer, test_data, infer_data_path, model
                 use_unsloth=use_unsloth,
             )
         )
-       
+        if post_process:
+            response = post_process_qwen3vl_output(response)
         results.append({"id": item.get("id", ""), "answer": response})
     
     return results
