@@ -14,6 +14,7 @@ from utils.utils import (
     load_config,
     normalize_quantization,
     save_submission_csv,
+    load_json_data
 )
 from utils.postprocessing import post_process_qwen3vl_output
 from dotenv import load_dotenv
@@ -97,12 +98,6 @@ def predict_answer(model, processor, tokenizer, messages, model_name, use_unslot
     return decode(output_ids)
 
 
-def load_test_data(infer_data_path):
-    """Load test data from JSON file."""
-    with open(infer_data_path, "r") as f:
-        test_data = json.load(f)
-    return test_data
-
 def run_inference(model, processor, tokenizer, test_data, model_name, use_unsloth, post_process=False, DEBUG=False):
     """Run inference on test data and return results."""
     results = []
@@ -182,7 +177,7 @@ def main():
     
     # Load test data
     print("Loading test data...")
-    test_data = load_test_data(infer_data_path)
+    test_data = load_json_data(infer_data_path)
     
     # Run inference
     print("Running inference...")
