@@ -25,23 +25,32 @@ def format_mcq_question(question: str, choices: Optional[list], thinking_enabled
         return f"{base_instr}\n\n{question} {' '.join(choices)}"
     return f"{base_instr}\n\n{question}"
 
-def build_user_content(video_path: str, question: str, choices: Optional[list], use_unsloth: bool, thinking_enabled: bool = False) -> dict:
+def build_user_content(
+    video_path: str, question: str, choices: Optional[list], use_unsloth: bool, thinking_enabled: bool = False
+) -> dict:
+    """Construct user content for conversation sample based on format."""
     video_path = video_abs_path(video_path)
     question = format_mcq_question(question, choices, thinking_enabled)
 
-    """Construct user content for conversation sample based on format."""
     if use_unsloth:
-        return {"role": "user", "content": [
-            {"type": "video", "video": video_path},
-            {"type": "text", "text": question},
-            ]
-            }
+        return {
+            "role": "user",
+            "content": [
+                {"type": "video", "video": video_path, "resized_height": 1920, "resized_width": 1080},
+                {"type": "text", "text": question},
+            ],
+        }
     else:
         # Generic processor format (with metadata structure) if not using Unsloth
-        return {"role": "user", "content":[
-            {"type": "video", "video": {"video_path": video_path, "fps": 1, "max_frames": 128}},
-            {"type": "text", "text": question},
-        ]
+        return {
+            "role": "user",
+            "content": [
+                {
+                    "type": "video",
+                    "video": {"video_path": video_path, "fps": 1, "max_frames": 128},
+                },
+                {"type": "text", "text": question},
+            ],
         }
 
 class RoadBuddyVideoDataset(Dataset):

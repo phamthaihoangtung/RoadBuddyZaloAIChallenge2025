@@ -27,7 +27,7 @@ def get_training_args(output_model_path: str, config: Dict[str, Any]):
     total_epochs = config.get("epochs", 1)
     batch_size = config.get("batch_size", 1)
     lr = float(config.get("learning_rate", 2e-4))
-    gradient_accumulation = config.get("grad_accum_steps", 1)
+    gradient_accumulation = config.get("grad_accum_steps", 8)
     warmup = config.get("warmup_steps", 5)
     max_steps = config.get("max_steps")  # optional override
     
