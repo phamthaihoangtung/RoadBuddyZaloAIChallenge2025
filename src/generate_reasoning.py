@@ -9,6 +9,7 @@ import json
 from tqdm import tqdm
 import torch
 import unsloth
+import re
 from models.utils import load_model
 from infer import predict_answer
 from utils.utils import load_json_data, video_abs_path
@@ -16,16 +17,96 @@ from utils.utils import load_json_data, video_abs_path
 
 DEBUG = True
 
-PROMPT_TEMPLATE = """You are an expert AI assistant specializing in Vietnamese traffic law. Your task is to generate a dataset for finetuning.
+# PROMPT_TEMPLATE = """You are an expert AI assistant specializing in Vietnamese traffic. Your task is to generate a dataset for finetuning.
+
+# Your job is to generate the `reasoning_steps` that logically explain why a "Known_Correct_Answer" is the correct solution for a given "Problem". The "Problem" is a multiple-choice question.
+
+# **CRITICAL INSTRUCTIONS:**
+# 1.  Your *entire* output MUST be a single, valid JSON object.
+# 2.  Do NOT write any text before or after the JSON (e.g., no "Here is the JSON...").
+# 3.  The `reasoning_steps` must be a brief list of logical steps.
+# 4.  The `final_answer` in your JSON *must exactly match* the "Known_Correct_Answer" provided.
+
+# ---
+# **TASK:**
+
+# [Problem]:
+# Question: {question}
+# Choices:
+# {choices}
+
+# [Known_Correct_Answer]:
+# "{answer}"
+
+# [Your JSON Output]:
+
+
+# """
+
+# PROMPT_TEMPLATE = """
+# You are an expert AI assistant specializing in Vietnamese traffic.
+# Answer the multiple choice question based on the video provided. 
+# Please select one of the provided choices and respond with only the choice letter in A, B, C, or D. Be concise in thinking.
+# {question}
+# {choices}
+# """
+
+PROMPT_TEMPLATE = """You are an expert AI assistant specializing in Vietnamese traffic. Your task is to generate a dataset for finetuning.
 
 Your job is to generate the `reasoning_steps` that logically explain why a "Known_Correct_Answer" is the correct solution for a given "Problem". The "Problem" is a multiple-choice question.
 
 **CRITICAL INSTRUCTIONS:**
 1.  Your *entire* output MUST be a single, valid JSON object.
-2.  Do NOT write any text before or after the JSON (e.g., no "Here is the JSON...").
+2.  Do NOT write any text before or after the JSON.
 3.  The `reasoning_steps` must be a brief list of logical steps. These steps must explain *why* the correct answer is right and *why* the other options are wrong, referencing Vietnamese traffic rules where possible.
 4.  The `final_answer` in your JSON *must exactly match* the "Known_Correct_Answer" provided.
 
+---
+**EXAMPLE 1:**
+
+[Problem]:
+Question: Phần đường trong video cho phép các phương tiện đi theo hướng nào khi đến nút giao?
+Choices:
+A. Đi thẳng,
+B. Đi thẳng và rẽ phải",
+C. Đi thẳng, rẽ trái và rẽ phải,
+D. Rẽ trái và rẽ phải
+
+[Known_Correct_Answer]:
+C. Đi thẳng, rẽ trái và rẽ phải
+
+[Your JSON Output]:
+{{
+    "reasoning_steps": [
+        "Identify overhead traffic signs and lane markings in the video frames",
+        "Observe that signs display arrows for straight, left turn, and right turn directions",
+        "Confirm no prohibitory signs restrict left or right turns at this intersection",
+        "Match observed allowed directions (straight, left, right) with option C"
+        ],
+    "final_answer": "C. Đi thẳng, rẽ trái và rẽ phải"
+}}
+---
+**EXAMPLE 2**
+
+[Problem]:
+Question: làn ngoài cùng bên phải xe mô tô có được phép đi không?
+Choices:
+A. Có
+B. Không
+
+[Known_Correct_Answer]:
+A. Có
+
+[Your JSON Output]:
+{{
+    "reasoning_steps": [
+        "Analyze traffic signs in the video, particularly the regulatory sign with circular symbols",
+        "Identify that the sign shows prohibitions for specific vehicle types (e.g., trucks, buses) but no motorcycle restriction",
+        "Confirm Vietnamese traffic regulations allow motorcycles in outermost right lanes unless explicitly prohibited",
+        "Verify no motorcycle-specific prohibition sign is present for the rightmost lane"
+    ],
+    "final_answer": "A. Có"
+}}
 ---
 **TASK:**
 
@@ -40,12 +121,13 @@ Choices:
 [Your JSON Output]:
 """
 
+
 def format_choices(choices):
     # Support both dict and list
     if isinstance(choices, dict):
-        return "\n".join([f"- {key}: {value}" for key, value in choices.items()])
+        return "\n".join([f"{key}: {value}" for key, value in choices.items()])
     elif isinstance(choices, list):
-        return "\n".join([f"- {value}" for value in choices])
+        return "\n".join(choices)
     else:
         return str(choices)
 
@@ -54,9 +136,9 @@ def main():
     parser.add_argument("--data_path", type=str, default="data/train/train.json", help="Path to the input data JSON file.")
     parser.add_argument("--output_path", type=str, default="data/train/train_thinking.json", help="Path to save the output JSON file.")
     parser.add_argument("--model_name", type=str, 
-                        default="unsloth/Qwen3-VL-32B-Thinking", 
+                        default="unsloth/Qwen3-VL-8B-Thinking", 
                         help="Hugging Face model id/path.")
-    parser.add_argument("--max_new_tokens", type=int, default=1024, help="Max new tokens for generation.")
+    parser.add_argument("--max_new_tokens", type=int, default=2048, help="Max new tokens for generation.")
     parser.add_argument("--use_unsloth", action="store_true", default=True, help="Force Unsloth preprocessing path.")
     parser.add_argument("--quantization_mode", type=str, default="4bit", choices=["4bit", "8bit", "none"],
                         help="Quantization mode (default: 4bit). Use 'none' to disable.")
@@ -82,7 +164,7 @@ def main():
     items = raw["data"] if isinstance(raw, dict) and "data" in raw else raw
     if not isinstance(items, list):
         raise ValueError("Input JSON must be a list of items or an object with a 'data' list.")
-
+    
     results = []
     if DEBUG:
         items = items[:5]
@@ -103,7 +185,7 @@ def main():
         message = {
             "role": "user",
             "content": [
-                {"type": "video", "video": video_path, "fps": 8},
+                {"type": "video", "video": video_path, "fps": 8, "resized_height": 1080, "resize_width": 1920},
                 {"type": "text", "text": prompt_text},
             ],
         }
@@ -120,26 +202,14 @@ def main():
         )
 
         generated_text = response.strip()
-        # Clean up potential markdown code fences
-        if generated_text.startswith("```json"):
-            generated_text = generated_text[7:].strip()
-            if generated_text.endswith("```"):
-                generated_text = generated_text[:-3].strip()
-        elif generated_text.startswith("```"):
-            generated_text = generated_text[3:].strip()
-            if generated_text.endswith("```"):
-                generated_text = generated_text[:-3].strip()
 
-        try:
-            reasoning_data = json.loads(generated_text)
-            new_item = dict(original_item)
-            new_item["reasoning"] = reasoning_data.get("reasoning_steps", [])
-            results.append(new_item)
-        except json.JSONDecodeError:
-            print(f"Failed to parse JSON for item {original_item.get('id', '<no-id>')}. Raw output: {generated_text}")
-            new_item = dict(original_item)
-            new_item["reasoning"] = ["Error: Failed to generate valid JSON reasoning."]
-            results.append(new_item)
+        new_item = dict(original_item)
+        new_item["generated_output"] = generated_text  # For debugging
+
+        # Extract raw reasoning between <think> and </think>
+        think_match = re.search(r"<think>([\s\S]*?)</think>", generated_text)
+        new_item["reasoning"] = think_match.group(1) if think_match else ""
+        results.append(new_item)
 
     with open(args.output_path, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=4)
