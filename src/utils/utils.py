@@ -5,9 +5,15 @@ import os
 import torch
 from typing import Any, Callable, Dict, Optional, Tuple
 import unsloth
+import json
 
 # Lazy imports for transformers inside functions to keep this module light when unavailable
 
+def load_json_data(infer_data_path):
+    """Load test data from JSON file."""
+    with open(infer_data_path, "r") as f:
+        test_data = json.load(f)
+    return test_data
 
 def load_config(path: str):
     """Load a YAML configuration file and return it as a dict."""
