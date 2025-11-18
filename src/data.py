@@ -34,7 +34,7 @@ def build_user_content(
         return {
             "role": "user",
             "content": [
-                {"type": "video", "video": video_path, "resized_height": 1920, "resized_width": 1080},
+                {"type": "video", "video": video_path, "resized_height": 1080, "resized_width": 1920},
                 {"type": "text", "text": question},
             ],
         }
