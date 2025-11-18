@@ -4,7 +4,6 @@ import yaml
 import os
 import torch
 from typing import Any, Callable, Dict, Optional, Tuple
-import unsloth
 import json
 
 # Lazy imports for transformers inside functions to keep this module light when unavailable
