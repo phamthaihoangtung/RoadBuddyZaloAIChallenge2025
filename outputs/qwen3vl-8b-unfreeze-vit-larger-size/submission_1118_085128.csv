@@ -1,0 +1,61 @@
+id,answer
+testa_0001,"user
+<0.1 seconds><0.6 seconds>Answer the multiple choice question based on the video provided. Please select one of the provided choices and respond with only the choice letter in A, B, C, or D.
+
+Theo trong video, nếu ô tô đi hướng chếch sang phải là hướng vào đường nào? A. Không có thông tin B. Dầu Giây Long Thành C. Đường Đỗ Xuân Hợp D. Xa Lộ Hà Nội
+assistant
+C"
+testa_0002,"user
+<0.1 seconds><0.6 seconds>Answer the multiple choice question based on the video provided. Please select one of the provided choices and respond with only the choice letter in A, B, C, or D.
+
+Theo trong video, nếu ô tô đi hướng chếch sang phải là hướng vào đường Xa Lộ Hà Nội. Đúng hay sai? A. Đúng B. Sai
+assistant
+B"
+testa_0003,"user
+<0.1 seconds><0.5 seconds>Answer the multiple choice question based on the video provided. Please select one of the provided choices and respond with only the choice letter in A, B, C, or D.
+
+Trong video có xuất hiện biển cảnh báo không? A. Có B. Không
+assistant
+A"
+testa_0004,"user
+<0.1 seconds><0.7 seconds>Answer the multiple choice question based on the video provided. Please select one of the provided choices and respond with only the choice letter in A, B, C, or D.
+
+Phía trước có đèn giao thông không? A. Có B. Không
+assistant
+A"
+testa_0005,"user
+<0.1 seconds><0.7 seconds>Answer the multiple choice question based on the video provided. Please select one of the provided choices and respond with only the choice letter in A, B, C, or D.
+
+Trong video, biển báo cấm ở góc phía bên phải cấm loại phương tiện nào: A. Xe đạp B. Xe máy C. Xe container D. Xe lam
+assistant
+B"
+testa_0006,"user
+<0.1 seconds><0.3 seconds>Answer the multiple choice question based on the video provided. Please select one of the provided choices and respond with only the choice letter in A, B, C, or D.
+
+Video có đèn đỏ không? A. Có B. Không
+assistant
+A"
+testa_0007,"user
+<0.1 seconds><0.3 seconds>Answer the multiple choice question based on the video provided. Please select one of the provided choices and respond with only the choice letter in A, B, C, or D.
+
+Có những loại biển báo nào xuất hiện trong đoạn video? A. Biển báo cấm, biển hiệu lệnh, biển báo trên đường cao tốc B. Biển báo cấm, biển chỉ dẫn C. Biển chỉ dẫn, biển phụ
+assistant
+A"
+testa_0008,"user
+<0.1 seconds><0.3 seconds>Answer the multiple choice question based on the video provided. Please select one of the provided choices and respond with only the choice letter in A, B, C, or D.
+
+Tại ngã tư trong video, phương tiện có thể đi được những hướng nào? A. Đi thẳng B. Rẽ trái C. Rẽ phải D. Tất cả đáp án trên
+assistant
+A"
+testa_0009,"user
+<0.1 seconds><0.4 seconds>Answer the multiple choice question based on the video provided. Please select one of the provided choices and respond with only the choice letter in A, B, C, or D.
+
+Tại ngã tư trong video, phương tiện có thể đi được những hướng nào? A. Đi thẳng, rẽ trái B. Đi thẳng, rẽ phải C. Đi thẳng, rẽ trái, rẽ phải D. Đi thẳng
+assistant
+B"
+testa_0010,"user
+<0.1 seconds><0.4 seconds>Answer the multiple choice question based on the video provided. Please select one of the provided choices and respond with only the choice letter in A, B, C, or D.
+
+Tại ngã tư trong video, phương tiện có thể quẹo trái không? A. Có B. Không
+assistant
+B"
