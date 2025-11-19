@@ -3,7 +3,7 @@ batch_size: 1
 epochs: 2
 learning_rate: 2e-4
 model_name: "unsloth/Qwen3-VL-8B-Instruct"
-output_model_path: "models/qwen3vl-8b-higher-rank"
+output_model_path: "models/qwen3vl-8b-signs"
 # model_name: "unsloth/Qwen2.5-VL-3B-Instruct-unsloth-bnb-4bit"
 # model_name: "models/unsloth_lora"
 train_data_path: "data/train/train.json"
@@ -11,7 +11,11 @@ infer_data_path: "data/public_test/public_test.json"
 use_unsloth: true
 
 use_wandb: true
-wandb_run_name: "tryourbest/qwen3vl-8b-higher-rank-experiment"
+wandb_run_name: "tryourbest/qwen3vl-8b-signs"
+
+# Push to Hugging Face Hub settings
+push_to_hub: false  # Set to true to enable pushing
+hub_model_id: "tryourbest/qwen3vl-8b-signs"  # Your target repo name
 
 # Quantization: Unsloth currently honors only 4bit via load_in_4bit
 quantization:
@@ -19,5 +23,6 @@ quantization:
   mode: "4bit"
 
 lora:
-  r: 16 # The larger, the higher the accuracy, but might overfit
-  lora_alpha: 16  # Recommended alpha == r at least
+  r: 32 # The larger, the higher the accuracy, but might overfit
+  lora_alpha: 32  # Recommended alpha == r at least
+

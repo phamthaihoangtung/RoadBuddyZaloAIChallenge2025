@@ -30,6 +30,8 @@ def get_training_args(output_model_path: str, config: Dict[str, Any]):
     gradient_accumulation = config.get("grad_accum_steps", 8)
     warmup = config.get("warmup_steps", 5)
     max_steps = config.get("max_steps")  # optional override
+    push_to_hub = config.get("push_to_hub", False)
+    hub_model_id = config.get("hub_model_id", None)
     
     print("Initial LR:", lr)
 
@@ -51,6 +53,8 @@ def get_training_args(output_model_path: str, config: Dict[str, Any]):
             bf16=config.get("bf16", True),
             optim="adamw_torch",
             report_to=["trackio"] if config.get("use_wandb", False) else ["none"],
+            push_to_hub=push_to_hub,
+            hub_model_id=hub_model_id,
         )
     return SFTConfig(
         output_dir=output_model_path,
@@ -78,6 +82,11 @@ def get_training_args(output_model_path: str, config: Dict[str, Any]):
         weight_decay=config.get("weight_decay", 0.0),
         lr_scheduler_type=config.get("lr_scheduler_type", "linear"),
         seed=config.get("seed", 3407),
+        
+        # Push to hub settings:
+        push_to_hub=push_to_hub,
+        hub_model_id=hub_model_id,
+        max_seq_length=50000
     )
 
 
@@ -104,6 +113,10 @@ def main():
     # Read train_data_path and output_model_path from config, allow CLI override
     train_data_path = config.get("train_data_path", "data/train/train.json")
     output_model_path = config.get("output_model_path", "models/unsloth_lora")
+    
+    # Push to hub configuration
+    push_to_hub = config.get("push_to_hub", False)
+    hub_model_id = config.get("hub_model_id", None)
 
     # Wandb configuration
     use_wandb = config.get("use_wandb", False)
@@ -138,7 +151,7 @@ def main():
     # Apply LoRA adapters if Unsloth
     model, tokenizer = build_lora_model(model, tokenizer, config)
 
-    dataset = RoadBuddyVideoDataset(train_data_path, use_unsloth=use_unsloth)
+    dataset = RoadBuddyVideoDataset(train_data_path, use_unsloth=use_unsloth, signs_dir="data/traffic_signs")
 
     # Prepare SFT trainer
     if SFTTrainer is None:
@@ -147,7 +160,7 @@ def main():
     if use_unsloth:
         try:
             from unsloth.trainer import UnslothVisionDataCollator
-            data_collator = UnslothVisionDataCollator(model, tokenizer)
+            data_collator = UnslothVisionDataCollator(model, tokenizer, max_seq_length=50000)
         except Exception:
             print("Falling back to simple collator; install unsloth_zoo for vision support.")
             data_collator = collate_unsloth
@@ -184,6 +197,16 @@ def main():
 
     print("Saved to", output_model_path)
     print("Training metrics:", train_result)
+    
+    # Push to Hugging Face Hub if configured
+    if push_to_hub:
+        if hub_model_id is None:
+            print("Warning: push_to_hub is True but hub_model_id is not set. Skipping push.")
+        else:
+            print(f"Pushing model to Hugging Face Hub: {hub_model_id}")
+            model.push_to_hub(hub_model_id, token=args.hf_token)
+            tokenizer.push_to_hub(hub_model_id, token=args.hf_token)
+            print(f"Successfully pushed to {hub_model_id}")
 
 
 if __name__ == "__main__":
