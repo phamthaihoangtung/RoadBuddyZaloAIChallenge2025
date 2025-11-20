@@ -31,3 +31,6 @@ logs/**
 unsloth_compiled_cache
 
 models/*
+
+!data/traffic_signs
+!data/traffic_signs/*

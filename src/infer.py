@@ -98,14 +98,20 @@ def predict_answer(model, processor, tokenizer, messages, model_name, use_unslot
     return decode(output_ids)
 
 
-def run_inference(model, processor, tokenizer, test_data, model_name, use_unsloth, post_process=False, DEBUG=False):
+def run_inference(model, processor, tokenizer, test_data, model_name, use_unsloth, signs=None, post_process=True, DEBUG=True):
     """Run inference on test data and return results."""
     results = []
     if DEBUG:
         test_data["data"] = test_data["data"][:10]  # Limit to first 10 samples in debug mode
 
     for item in tqdm(test_data["data"]):
-        messages = build_user_content(item["video_path"], item["question"], item["choices"], use_unsloth)
+        messages = build_user_content(
+            item["video_path"], 
+            item["question"], 
+            item["choices"], 
+            use_unsloth,
+            signs=signs
+        )
         response = (
             model.predict(messages)
             if model_name == "placeholder"
@@ -143,6 +149,11 @@ def main():
     attn_implementation = config.get("attn_implementation", "flash_attention_2")
     quantization = normalize_quantization(config)
     use_unsloth = config.get("use_unsloth", False)
+    signs_dir = config.get("signs_dir", "data/traffic_signs")
+    
+    # Load traffic signs
+    from glob import glob
+    signs = glob(os.path.join(signs_dir, "*")) if signs_dir and os.path.exists(signs_dir) else None
     
     # Wandb configuration
     use_wandb = config.get("use_wandb", False)
@@ -181,7 +192,15 @@ def main():
     
     # Run inference
     print("Running inference...")
-    results = run_inference(model, processor, tokenizer, test_data, infer_data_path, model_name, use_unsloth)
+    results = run_inference(
+        model, 
+        processor, 
+        tokenizer, 
+        test_data, 
+        model_name, 
+        use_unsloth,
+        signs=signs
+    )
     
     # Save results
     print("Saving results...")

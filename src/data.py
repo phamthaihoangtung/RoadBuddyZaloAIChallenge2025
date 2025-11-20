@@ -3,9 +3,12 @@ from dataclasses import dataclass
 import os
 from typing import Any, Dict, List, Optional
 from torch.utils.data import Dataset
+from glob import glob
 
 from utils.utils import video_abs_path
 
+DEBUG = False
+FPS = 8
 
 @dataclass
 class ConversationSample:
@@ -15,6 +18,7 @@ class ConversationSample:
 def format_mcq_question(question: str, choices: Optional[list]) -> str:
     """Combine question and choices into a single instruction-friendly string."""
     base_instr = (
+        "You are an AI assistant specialized in Vietnam traffic senario understanding."
         "Answer the multiple choice question based on the video provided. "
         "Please select one of the provided choices and respond with only the "
         "choice letter in A, B, C, or D."
@@ -24,23 +28,31 @@ def format_mcq_question(question: str, choices: Optional[list]) -> str:
     return f"{base_instr}\n\n{question}"
 
 def build_user_content(
-    video_path: str, question: str, choices: Optional[list], use_unsloth: bool
+    video_path: str, question: str, choices: Optional[list], use_unsloth: bool, signs: Optional[list] = None, use_support_frame: bool = False
 ) -> dict:
+
     """Construct user content for conversation sample based on format."""
     video_path = video_abs_path(video_path)
     question = format_mcq_question(question, choices)
 
     if use_unsloth:
-        return {
+        content = {
             "role": "user",
             "content": [
-                {"type": "video", "video": video_path, "resized_height": 1080, "resized_width": 1920},
+                {"type": "video", "video": video_path, "resized_height": 1080, "resized_width": 1920, "fps": FPS},
                 {"type": "text", "text": question},
             ],
         }
+        if signs:
+            for sign in signs:
+                content["content"].append({"type": "image", "image": sign})
+            content["content"][1]['text'] += "\nRefer to the provided traffic sign images when answering the question if relevant."
+            
+        if use_support_frame:
+            content["content"][1]['text'] += "\nTry to guess the important frames in the video that may help answer the question first."
     else:
         # Generic processor format (with metadata structure) if not using Unsloth
-        return {
+        content = {
             "role": "user",
             "content": [
                 {
@@ -50,6 +62,9 @@ def build_user_content(
                 {"type": "text", "text": question},
             ],
         }
+    if DEBUG:
+        print("Built user content:", content)
+    return content
 
 class RoadBuddyVideoDataset(Dataset):
     """Dataset converting train.json rows into Unsloth vision conversation format.
@@ -59,12 +74,14 @@ class RoadBuddyVideoDataset(Dataset):
     Video is referenced by path; reading/decoding is handled later by vision_utils.
     """
 
-    def __init__(self, data_path: str, root_dir: str = "data", use_unsloth: bool = True):
+    def __init__(self, data_path: str, root_dir: str = "data", use_unsloth: bool = True, signs_dir: Optional[str] = None, use_support_frame: bool = False):
         with open(data_path, "r") as f:
             raw = json.load(f)
         self.items = raw["data"]
         self.root_dir = root_dir
         self.use_unsloth = use_unsloth
+        self.signs = glob(os.path.join(signs_dir, "*")) if signs_dir and os.path.exists(signs_dir) else None
+        self.use_support_frame = use_support_frame
 
     def __len__(self):
         return len(self.items)
@@ -72,7 +89,14 @@ class RoadBuddyVideoDataset(Dataset):
     def __getitem__(self, idx: int) -> ConversationSample:
         item = self.items[idx]
 
-        user_content = build_user_content(item["video_path"], item["question"], item['choices'], self.use_unsloth)
+        user_content = build_user_content(
+            item["video_path"], 
+            item["question"], 
+            item['choices'], 
+            self.use_unsloth, 
+            signs=self.signs
+        )
+
 
         raw_ans = item.get("answer", "")
         # Target should be just the choice letter (A/B/C/D)
@@ -81,8 +105,15 @@ class RoadBuddyVideoDataset(Dataset):
         else:
             answer_text = (raw_ans or "A").strip()[:1]
 
+        if self.use_support_frame:
+            support_frame = ','.join([str(int(support_time*FPS)) for support_time in item['support_frames']])
+            support_text = f"\nThe important frame(s): {support_frame}\n"
+            answer_text = support_text + answer_text
+            
         sample = [
             user_content,
             {"role": "assistant", "content": [{"type": "text", "text": answer_text}]},
         ]
+        if DEBUG:
+            print(sample)
         return ConversationSample(messages=sample)
