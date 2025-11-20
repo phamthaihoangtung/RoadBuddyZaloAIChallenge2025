@@ -8,6 +8,7 @@ from glob import glob
 from utils.utils import video_abs_path
 
 DEBUG = False
+FPS = 8
 
 @dataclass
 class ConversationSample:
@@ -27,8 +28,9 @@ def format_mcq_question(question: str, choices: Optional[list]) -> str:
     return f"{base_instr}\n\n{question}"
 
 def build_user_content(
-    video_path: str, question: str, choices: Optional[list], use_unsloth: bool, signs: Optional[list] = None
+    video_path: str, question: str, choices: Optional[list], use_unsloth: bool, signs: Optional[list] = None, use_support_frame: bool = False
 ) -> dict:
+
     """Construct user content for conversation sample based on format."""
     video_path = video_abs_path(video_path)
     question = format_mcq_question(question, choices)
@@ -37,14 +39,17 @@ def build_user_content(
         content = {
             "role": "user",
             "content": [
-                {"type": "video", "video": video_path, "resized_height": 1080, "resized_width": 1920},
+                {"type": "video", "video": video_path, "resized_height": 1080, "resized_width": 1920, "fps": FPS},
                 {"type": "text", "text": question},
             ],
         }
         if signs:
             for sign in signs:
                 content["content"].append({"type": "image", "image": sign})
-            content["content"][1]['text'] += "\n\nRefer to the provided traffic sign images when answering the question if relevant."
+            content["content"][1]['text'] += "\nRefer to the provided traffic sign images when answering the question if relevant."
+            
+        if use_support_frame:
+            content["content"][1]['text'] += "\nTry to guess the important frames in the video that may help answer the question first."
     else:
         # Generic processor format (with metadata structure) if not using Unsloth
         content = {
@@ -69,13 +74,14 @@ class RoadBuddyVideoDataset(Dataset):
     Video is referenced by path; reading/decoding is handled later by vision_utils.
     """
 
-    def __init__(self, data_path: str, root_dir: str = "data", use_unsloth: bool = True, signs_dir: Optional[str] = None):
+    def __init__(self, data_path: str, root_dir: str = "data", use_unsloth: bool = True, signs_dir: Optional[str] = None, use_support_frame: bool = False):
         with open(data_path, "r") as f:
             raw = json.load(f)
         self.items = raw["data"]
         self.root_dir = root_dir
         self.use_unsloth = use_unsloth
         self.signs = glob(os.path.join(signs_dir, "*")) if signs_dir and os.path.exists(signs_dir) else None
+        self.use_support_frame = use_support_frame
 
     def __len__(self):
         return len(self.items)
@@ -91,6 +97,7 @@ class RoadBuddyVideoDataset(Dataset):
             signs=self.signs
         )
 
+
         raw_ans = item.get("answer", "")
         # Target should be just the choice letter (A/B/C/D)
         if isinstance(raw_ans, str) and "." in raw_ans:
@@ -98,8 +105,15 @@ class RoadBuddyVideoDataset(Dataset):
         else:
             answer_text = (raw_ans or "A").strip()[:1]
 
+        if self.use_support_frame:
+            support_frame = ','.join([str(int(support_time*FPS)) for support_time in item['support_frames']])
+            support_text = f"\nThe important frame(s): {support_frame}\n"
+            answer_text = support_text + answer_text
+            
         sample = [
             user_content,
             {"role": "assistant", "content": [{"type": "text", "text": answer_text}]},
         ]
+        if DEBUG:
+            print(sample)
         return ConversationSample(messages=sample)

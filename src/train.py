@@ -151,7 +151,7 @@ def main():
     # Apply LoRA adapters if Unsloth
     model, tokenizer = build_lora_model(model, tokenizer, config)
 
-    dataset = RoadBuddyVideoDataset(train_data_path, use_unsloth=use_unsloth, signs_dir="data/traffic_signs")
+    dataset = RoadBuddyVideoDataset(train_data_path, use_unsloth=use_unsloth, signs_dir="data/traffic_signs", use_support_frame=True)
 
     # Prepare SFT trainer
     if SFTTrainer is None:
@@ -179,6 +179,14 @@ def main():
         data_collator=data_collator,
         args=training_args,
     )
+    
+    if model_name.startswith("qwen") and use_unsloth:
+        from unsloth.chat_templates import train_on_responses_only
+        trainer = train_on_responses_only(
+            trainer,
+            instruction_part = "<|start_header_id|>user<|end_header_id|>\n\n",
+            response_part = "<|start_header_id|>assistant<|end_header_id|>\n\n",
+        )
 
     print("Starting training...")
     train_result = trainer.train()

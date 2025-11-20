@@ -98,7 +98,7 @@ def predict_answer(model, processor, tokenizer, messages, model_name, use_unslot
     return decode(output_ids)
 
 
-def run_inference(model, processor, tokenizer, test_data, model_name, use_unsloth, signs=None, post_process=True, DEBUG=False):
+def run_inference(model, processor, tokenizer, test_data, model_name, use_unsloth, signs=None, post_process=True, DEBUG=True):
     """Run inference on test data and return results."""
     results = []
     if DEBUG:
