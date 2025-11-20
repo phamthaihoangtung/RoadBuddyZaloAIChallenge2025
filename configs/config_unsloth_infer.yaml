@@ -3,12 +3,12 @@ batch_size: 1
 epochs: 2
 learning_rate: 2e-4
 # model_name: "models/qwen3vl-8b-higher-rank"
-# model_name: "models/qwen3vl-8b-signs"
-# output_model_path: "models/qwen3vl-8b-higher-rank"
-model_name: "unsloth/Qwen3-VL-8B-Instruct"
+model_name: "models/qwen3vl-8b-signs-responses-only"
+# output_model_path: "models/qwen3vl-8b-signs-responses-only"
+# model_name: "unsloth/Qwen3-VL-8B-Instruct"
 train_data_path: "data/train/train.json"
 infer_data_path: "data/public_test/public_test.json"
-output_path: "outputs/qwen3vl-8b-signs-no-tuning"
+output_path: "outputs/qwen3vl-8b-signs-responses-only"
 
 use_unsloth: true
 
