@@ -37,6 +37,17 @@ from tqdm import tqdm
 from models.utils import load_model
 from data import build_user_content
 
+def seed_everything(seed=42):
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    
+seed_everything(42) # Ví dụ cho seed bằng 42
+
 # Load environment variables from .env file
 load_dotenv()
 
