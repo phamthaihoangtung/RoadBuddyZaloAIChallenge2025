@@ -34,21 +34,23 @@ def video_abs_path(rel: str) -> str:
     
     Dataset uses paths like train/videos/... - ensure absolute path.
     """
-    p = os.path.join("data", rel) if not rel.startswith("data/") else rel
-    return p
+    # p = os.path.join("data", rel) if not rel.startswith("data/") else rel
+    # return p
+    return rel
 
 def save_submission_csv(results, infer_data_path, output_path):
-    ts = datetime.now().strftime("%m%d_%H%M%S")
-    # Determine target directory
-    if not output_path:
-        submission_dir = os.path.join(os.path.dirname(infer_data_path), "submission")
-        output_dir = submission_dir
-    else:
-        output_dir = output_path
-    # Ensure directory exists
-    os.makedirs(output_dir, exist_ok=True)
+    # ts = datetime.now().strftime("%m%d_%H%M%S")
+    # # Determine target directory
+    # if not output_path:
+    #     submission_dir = os.path.join(os.path.dirname(infer_data_path), "submission")
+    #     output_dir = submission_dir
+    # else:
+    #     output_dir = output_path
+    # # Ensure directory exists
+    # os.makedirs(output_dir, exist_ok=True)
 
-    output_csv = os.path.join(output_dir, f"submission_{ts}.csv")
+    # output_csv = os.path.join(output_dir, f"submission_{ts}.csv")
+    output_csv = os.path.join(output_path, "submission.csv")
     df = pd.DataFrame(results)
     df.to_csv(output_csv, index=False)
     print(f"Results saved to {output_csv}")

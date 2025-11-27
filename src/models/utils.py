@@ -83,7 +83,7 @@ def _load_unsloth_model(
         raise ImportError(
             "Unsloth requested but not installed. Install with: pip install unsloth"
         ) from e
-    
+    is_local = True
     print(f"Loading Unsloth FastVisionModel from {'local path' if is_local else 'hub'}: {model_name}")
     
     # Unsloth only supports 4-bit quantization
@@ -96,6 +96,7 @@ def _load_unsloth_model(
         load_in_4bit=load_in_4bit,
         use_gradient_checkpointing="unsloth",
         token=None if is_local else hf_token,
+        local_files_only=True,
     )
     
     # Configure model for inference or training

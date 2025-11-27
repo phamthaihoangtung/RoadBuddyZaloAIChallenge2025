@@ -6,43 +6,25 @@ description = "Video-based question answering for Road Buddy Challenge (Zalo AI 
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-	"numpy==1.24.4",
+	"numpy",
 	"pandas",
 	"scikit-learn",
 	"matplotlib",
 	"packaging",
 	"ninja",
-	"imageio==2.34.0",
-	"imageio-ffmpeg==0.4.9",
+	"imageio",
+	"imageio-ffmpeg",
 	"torch==2.6.0",
 	"torchvision==0.21.0",
-	"transformers==4.57.1",
+	"transformers",
 	"pyyaml",
 	"accelerate",
 	"decord==0.6.0",
 	"moviepy==1.0.3",
 	"ffmpeg-python",
 	"setuptools>=80.9.0",
-	"opencv-python==4.6.0.66",
+	"opencv-python",
 	"pyarrow",
 	"pysubs2",
-	"python-dotenv>=1.2.1",
-    # "unsloth[cu118-ampere-torch260] @ git+https://github.com/unslothai/unsloth.git"
+	"python-dotenv",
 ]
-
-[tool.uv.sources]
-torch = [
-	{ index = "pytorch-cu118" },
-]
-torchvision = [
-	{ index = "pytorch-cu118" },
-]
-
-[[tool.uv.index]]
-name = "pytorch-cu118"
-url = "https://download.pytorch.org/whl/cu118"
-explicit = true
-
-# [tool.uv]
-# # Exclude flash-attn from build isolation to avoid torch dependency issues
-# no-build-isolation-package = ["flash-attn"]

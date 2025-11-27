@@ -1,0 +1,25 @@
+# Example configuration for training
+batch_size: 1
+epochs: 2
+learning_rate: 2e-4
+
+# model_name: "tryourbest/qwen3vl-8b-signs-responses-only"
+model_name: "models/hub/models--tryourbest--qwen3vl-2b-16bf-signs-responses-only/snapshots/274ecb90a263f880c6bd8471b6074f7642475984"
+
+
+infer_data_path: "/data/private_test.json"
+output_path: "/result"
+
+use_unsloth: true
+
+use_wandb: false
+wandb_run_name: ""
+
+# Quantization: Unsloth currently honors only 4bit via load_in_4bit
+quantization:
+  enabled: true
+  mode: "4bit"
+
+# lora:
+#   r: 64 # The larger, the higher the accuracy, but might overfit
+#   lora_alpha: 64  # Recommended alpha == r at least
